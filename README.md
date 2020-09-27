@@ -1,4 +1,4 @@
-# BCVUMPS
+# BCVUMPS.jl
 
 [![Build Status](https://travis-ci.com/XingyuZhang2018/BCVUMPS.jl.svg?branch=master)](https://travis-ci.com/XingyuZhang2018/BCVUMPS.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/XingyuZhang2018/BCVUMPS.jl?svg=true)](https://ci.appveyor.com/project/XingyuZhang2018/BCVUMPS-jl)
