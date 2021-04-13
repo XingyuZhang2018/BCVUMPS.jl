@@ -1,21 +1,35 @@
 using BCVUMPS
-using Test, LinearAlgebra, TensorOperations, KrylovKit, Random
+using Test
 
-include("3x3mpo.jl")
+@testset "BCVUMPS.jl" begin
+    @testset "fixedpoint" begin
+        println("fixedpoint tests running...")
+        include("fixedpoint.jl")
+    end
 
-@testset "3x3M,Me" begin
-    include("3x3M,ME.jl")
-end
+    @testset "environment" begin
+        println("environment tests running...")
+        include("environment.jl")
+    end
 
-@testset "orthogonality" begin
-    include("orth.jl")
-end
+    @testset "bcvumpsruntime" begin
+        println("bcvumpsruntime tests running...")
+        include("bcvumpsruntime.jl")
+    end
 
-@testset "environment" begin
-    include("env.jl")
-end
+    @testset "example tensors" begin
+        println("exampletensors tests running...")
+        include("exampletensors.jl")
+    end
 
-@testset "vumpsstep" begin
-    include("vumpsstep.jl")
+    @testset "MCMC" begin
+        println("MCMC tests running...")
+        include("MCMC.jl")
+    end
+
+    @testset "example obs" begin
+        println("example obs tests running...")
+        include("exampleobs.jl")
+    end
 end
 
