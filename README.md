@@ -1,7 +1,7 @@
 # BCVUMPS.jl
 
 [![Build Status](https://travis-ci.com/XingyuZhang2018/BCVUMPS.jl.svg?branch=dev)](https://travis-ci.com/XingyuZhang2018/BCVUMPS.jl)
-[![Coverage](https://codecov.io/gh/XingyuZhang2018/BCVUMPS.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/XingyuZhang2018/BCVUMPS.jl)
+[![codecov](https://codecov.io/gh/XingyuZhang2018/BCVUMPS.jl/branch/dev/graph/badge.svg?token=PFvDJcnIeV)](https://codecov.io/gh/XingyuZhang2018/BCVUMPS.jl)
 
 This is a julia package to realise Big Cell(BC) for Variational Uniform Matrix product states(VUMPS). 
 
