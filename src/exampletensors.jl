@@ -5,10 +5,10 @@ using FileIO
 const isingβc = log(1+sqrt(2))/2
 
 """
-    model_tensor(::MT, β::Real, Ni::Int, Nj::Int; r = 1)
+    model_tensor(model::Ising, β::Real)
 
-return the  `MT <: HamiltonianModel` bulktensor at inverse temperature `β` for a `Ni × Nj` two-dimensional
-square lattice tensor-network. `r` is the ratio of `J1` and `j2`.
+return the  `MT <: HamiltonianModel` bulktensor at inverse temperature `β` for  two-dimensional
+square lattice tensor-network.
 """
 function model_tensor(model::Ising, β::Real)
     Ni,Nj = model.Ni, model.Nj
@@ -57,10 +57,10 @@ function model_tensor(model::Ising33, β::Real)
 end
 
 """
-    mag_tensor(::MT, β::Real, Ni::Int, Nj::Int; r = 1)
+    mag_tensor(::MT, β::Real)
 
-return the  `MT <: HamiltonianModel` the operator for the magnetisation at inverse temperature `β` for a `Ni × Nj` two-dimensional
-square lattice tensor-network. `r` is the ratio of `J1` and `j2`.
+return the  `MT <: HamiltonianModel` the operator for the magnetisation at inverse temperature `β` for a two-dimensional
+square lattice tensor-network. 
 """
 function mag_tensor(model::Ising, β::Real)
     Ni,Nj = model.Ni, model.Nj
@@ -93,10 +93,10 @@ function mag_tensor(model::Ising22, β::Real)
 end
 
 """
-    energy_tensor(::Ising, β::Real, Ni::Int, Nj::Int; r = 1)
+    energy_tensor(model::Ising, β::Real)
 
-return the  `MT <: HamiltonianModel` the operator for the energy at inverse temperature `β` for a `Ni × Nj` two-dimensional
-    square lattice tensor-network. `r` is the ratio of `J1` and `j2`.
+return the  `MT <: HamiltonianModel` the operator for the energy at inverse temperature `β` for a two-dimensional
+    square lattice tensor-network. 
 """
 function energy_tensor(model::Ising, β::Real)
     Ni,Nj = model.Ni, model.Nj

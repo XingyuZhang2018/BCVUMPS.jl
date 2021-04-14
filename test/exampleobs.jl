@@ -1,6 +1,6 @@
 using Test
 using BCVUMPS
-using BCVUMPS:bcvumps_env,magnetisation,magofβ,energy,eneofβ
+using BCVUMPS:bcvumps_env,magnetisation,magofβ,energy,eneofβ,Z,Zofβ
 using Random
 
 @testset "$(Ni)x$(Nj) ising" for Ni = [1,2,3], Nj = [1,2,3]
@@ -10,6 +10,7 @@ using Random
         env = bcvumps_env(model, β, 2; tol=1e-10, maxiter=20, verbose = false)
         @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
         @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
+        @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
     end
 end
 
@@ -20,6 +21,7 @@ end
         env = bcvumps_env(model, β, 2; tol=1e-10, maxiter=20, verbose = false)
         @test isapprox(magnetisation(env, model, β), magofβ(Ising(),β), atol=1e-5)
         @test isapprox(energy(env, model, β), eneofβ(Ising(),β), atol=1e-2)
+        @test isapprox(Z(env), Zofβ(Ising(),β), atol=1e-3)
     end
 
     Random.seed!(100)

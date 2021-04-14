@@ -28,7 +28,30 @@ function bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false) w
 end
 
 """
-    magnetisation(env::SquareVUMPSRuntime, model::MT, β; r=1)
+    Z(env::SquareBCVUMPSRuntime)
+
+return the partition function of the `env`.
+"""
+function Z(env::SquareBCVUMPSRuntime)
+    M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
+    Ni,Nj = size(M)
+    AC = Array{Array,2}(undef, Ni, Nj)
+    for j = 1:Nj,i = 1:Ni
+        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
+    end
+    z_tol = 0
+    for j = 1:Nj,i = 1:Ni
+        ir = i + 1 - Ni * (i==Ni)
+        jr = j + 1 - Nj * (j==Nj)
+        z = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
+        λ = ein"αcβ,βη,ηcγ,αγ ->"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))[]
+        z_tol += abs(z/λ)
+    end
+    return z_tol/Ni/Nj
+end
+
+"""
+    magnetisation(env::SquareBCVUMPSRuntime, model::MT, β)
 
 return the magnetisation of the `model`. Requires that `mag_tensor` are defined for `model`.
 """
@@ -98,5 +121,23 @@ function eneofβ(::Ising, β)
         return -1.909085845408498
     elseif β == 0.8
         return -1.9848514445364174
+    end
+end
+
+"""
+    Zofβ(::Ising,β)
+
+return some the numerical integrations of analytical result for the partition function at inverse temperature
+`β` for the 2d classical ising model.
+"""
+function Zofβ(::Ising,β)
+    if β == 0.2
+        return 2.084503739466302
+    elseif β == 0.4
+        return 2.409366429881355
+    elseif β == 0.6
+        return 3.3539286440313782
+    elseif β == 0.8
+        return 4.962010437125516
     end
 end
