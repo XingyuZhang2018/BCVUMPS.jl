@@ -2,7 +2,7 @@ using Test
 using BCVUMPS
 using Random
 
-@testset "bcvumps" for Ni = [1,2,3], Nj = [1,2,3]
+@testset "$(Ni)x$(Nj) bcvumps" for Ni = [1,2,3], Nj = [1,2,3]
     @test SquareLattice <: AbstractLattice
 
     M = Array{Array,2}(undef, Ni, Nj)

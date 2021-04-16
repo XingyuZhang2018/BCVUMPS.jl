@@ -73,13 +73,13 @@ function getL!(A,L; kwargs...)
     D = size(A[1,1],1)
     for j = 1:Nj, i = 1:Ni
         _,ρs,_ = eigsolve(ρ->ρmap(ρ,A[i,:],j), L[i,j]'*L[i,j], 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
-        ρ = ρs[1] + ρs[1]'
+        ρ = real(ρs[1] + ρs[1]')
         ρ ./= tr(ρ)
         F = svd!(ρ)
         Lo = lmul!(Diagonal(sqrt.(F.S)), F.Vt)
         _, L[i,j] = qrpos!(Lo)
     end
-    return real(L)
+    return L
 end
 
 """
@@ -108,7 +108,7 @@ function getLsped(Le, A, AL; kwargs...)
     L = Array{Array,2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         _, Ls, _ = eigsolve(X -> ein"dc,csb,dsa -> ab"(X,A[i,j],conj(AL[i,j])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
-        _, L[i,j] = qrpos!(Ls[1])
+        _, L[i,j] = qrpos!(real(Ls[1]))
     end
     return L
 end
@@ -160,7 +160,7 @@ function rightorth(A,L=cellones(size(A,1),size(A,2),size(A[1,1],1)); tol = 1e-12
 end
 
 """
-    FLmap(ALi,ALip, Mi, FL, J)
+    FLmap(ALi, ALip, Mi, FL, J)
 
 ALip means ALᵢ₊₁
 ```
@@ -171,7 +171,7 @@ FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...
  ┕──  ALᵢ₊₁ⱼ ─ ALᵢ₊₁ⱼ₊₁ ──   ...
 ```
 """
-function FLmap(ALi,ALip, Mi, FL, J)
+function FLmap(ALi, ALip, Mi, FL, J)
     Nj = size(ALi,1)
     for j=1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
@@ -181,7 +181,7 @@ function FLmap(ALi,ALip, Mi, FL, J)
 end
 
 """
-    FRmap(ARi,ARip, Mi, FR, J)
+    FRmap(ARi, ARip, Mi, FR, J)
 
 ARip means ARᵢ₊₁
 ```
@@ -192,7 +192,7 @@ ARip means ARᵢ₊₁
    ... ─ ARᵢ₊₁ⱼ₋₁ ─ ARᵢ₊₁ⱼ  ──┘ 
 ```
 """
-function FRmap(ARi,ARip, Mi, FR, J)
+function FRmap(ARi, ARip, Mi, FR, J)
     Nj = size(ARi,1)
     for j=1:Nj
         jr = J-(j-1) + (J-(j-1) < 1)*Nj
@@ -201,7 +201,7 @@ function FRmap(ARi,ARip, Mi, FR, J)
     return FR
 end
 
-function FLint(AL,M)
+function FLint(AL, M)
     Ni,Nj = size(AL)
     FL = Array{Array,2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
@@ -212,7 +212,7 @@ function FLint(AL,M)
     return FL
 end
 
-function FRint(AR,M)
+function FRint(AR, M)
     Ni,Nj = size(AR)
     FR = Array{Array,2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
@@ -338,7 +338,7 @@ FLᵢ₊₁ⱼ ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ  =  λACᵢⱼ ┌──�
 .        .         .
 ```
 """
-function ACenv!(AC, FL, M, FR;kwargs...)
+function ACenv!(AC, FL, M, FR; kwargs...)
     Ni,Nj = size(AC)
     λAC = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
@@ -366,7 +366,7 @@ FLᵢ₊₁ⱼ₊₁ ── FRᵢ₊₁ⱼ   =  λCᵢⱼ ┌──Cᵢⱼ ─�
 .           .     
 ```
 """
-function Cenv!(C, FL, FR;kwargs...)
+function Cenv!(C, FL, FR; kwargs...)
     Ni,Nj = size(C)
     λC = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
