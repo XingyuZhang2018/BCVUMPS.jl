@@ -20,23 +20,23 @@ a struct to hold the tensors during the `bcvumps` algorithm, each is a `Ni` x `N
 - `D × d' × D` `FR[i,j]` tensor
 and `LT` is a AbstractLattice to define the lattice type.
 """
-struct BCVUMPSRuntime{LT,T,N,AT<:AbstractArray{<:AbstractArray,2},ET}
+struct BCVUMPSRuntime{LT,T,N,AT <: AbstractArray{<:AbstractArray,2},ET}
     M::AT
     AL::ET
     C::ET
     AR::ET
     FL::ET
     FR::ET
-    function BCVUMPSRuntime{LT}(M::AT, AL::ET, C::ET, AR::ET,FL::ET, FR::ET) where {LT<:AbstractLattice,AT<:AbstractArray{<:AbstractArray,2},ET<:AbstractArray{<:AbstractArray,2}}
+    function BCVUMPSRuntime{LT}(M::AT, AL::ET, C::ET, AR::ET, FL::ET, FR::ET) where {LT <: AbstractLattice,AT <: AbstractArray{<:AbstractArray,2},ET <: AbstractArray{<:AbstractArray,2}}
         T, N = eltype(M[1,1]), ndims(M[1,1])
-        new{LT,T,N,AT,ET}(M,AL,C,AR,FL,FR)
+        new{LT,T,N,AT,ET}(M, AL, C, AR, FL, FR)
     end
 end
 
 const SquareBCVUMPSRuntime{T,AT} = BCVUMPSRuntime{SquareLattice,T,4,AT}
-function SquareBCVUMPSRuntime(M::AT,AL,C,AR,FL,FR) where {AT<:AbstractArray{<:AbstractArray,2}}
+function SquareBCVUMPSRuntime(M::AT, AL, C, AR, FL, FR) where {AT <: AbstractArray{<:AbstractArray,2}}
     ndims(M[1,1]) == 4 || throw(DimensionMismatch("M dimensions error, should be `4`, got $(ndims(M[1,1]))."))
-    BCVUMPSRuntime{SquareLattice}(M,AL,C,AR,FL,FR)
+    BCVUMPSRuntime{SquareLattice}(M, AL, C, AR, FL, FR)
 end
 
 @doc raw"
@@ -67,54 +67,54 @@ julia> size(rt.AL[1,1]) == (4,2,4)
 true
 ```
 "
-function SquareBCVUMPSRuntime(M::AbstractArray{<:AbstractArray, 2}, env, D::Int; verbose = false)
-    return SquareBCVUMPSRuntime(M, _initializect_square(M, env, D; verbose = verbose)...)
+function SquareBCVUMPSRuntime(M::AbstractArray{<:AbstractArray,2}, env, D::Int; verbose=false)
+    return SquareBCVUMPSRuntime(M, _initializect_square(M, env, D; verbose=verbose)...)
 end
 
-function _initializect_square(M::AbstractArray{<:AbstractArray, 2}, env::Val{:random}, D::Int; verbose = false)
+function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
     T = eltype(M[1,1])
     Ni, Nj = size(M)
     A = Array{Array,2}(undef, Ni, Nj)
-    for j = 1:Nj, i = 1:Ni
-        d = size(M[i,j],4)
-        A[i,j] = rand(T,D,d,D)
+    for j in 1:Nj, i in 1:Ni
+        d = size(M[i,j], 4)
+        A[i,j] = rand(T, D, d, D)
     end
-    AL,L = leftorth(A)
+    AL, L = leftorth(A)
     R, AR = rightorth(AL)
     _, FL = leftenv!(AL, M)
     _, FR = rightenv!(AR, M)
-    C = Array{Array,2}(undef, Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
-        jr = j + 1 - (j+1>Nj) * Nj
+    C = Array{Array,2}(undef, Ni, Nj)
+    for j in 1:Nj,i in 1:Ni
+        jr = j + 1 - (j + 1 > Nj) * Nj
         C[i,j] = L[i,j] * R[i,jr]
     end
     verbose && print("random initial bcvumps $(Ni)×$(Nj) environment-> ")
-    AL,C,AR,FL,FR
+AL, C, AR, FL, FR
 end
 
-function _initializect_square(M::AbstractArray{<:AbstractArray, 2}, chkp_file::String, D::Int; verbose = false)
+function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::String, D::Int; verbose=false)
     env = load(chkp_file)["env"]
     Ni, Nj = size(M)
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
-    AL,C,AR,FL,FR = env.AL,env.C,env.AR,env.FL,env.FR
+    AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
 end
 
-function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, verbose = false)
+function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, verbose=false)
     # initialize
     olderror = Inf
 
     stopfun = StopFunction(olderror, -1, tol, maxiter)
-    rt, err = fixedpoint(res->bcvumpstep(res...), (rt, olderror, tol), stopfun)
+    rt, err = fixedpoint(res -> bcvumpstep(res...), (rt, olderror, tol), stopfun)
     verbose && println("bcvumps done@step: $(stopfun.counter), error=$(err)")
     return rt
 end
 
-function bcvumpstep(rt::BCVUMPSRuntime,err,tol)
-    M,AL,C,AR,FL,FR= rt.M,rt.AL,rt.C,rt.AR,rt.FL,rt.FR
-    AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR; tol = tol/10)
-    _, FL = leftenv!(AL, M, FL; tol = tol/10)
-    _, FR = rightenv!(AR, M, FR; tol = tol/10)
-    err = error(AL,C,FL,M,FR)
+function bcvumpstep(rt::BCVUMPSRuntime, err, tol)
+    M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
+    AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR; tol=tol / 10)
+    _, FL = leftenv!(AL, M, FL; tol=tol / 10)
+    _, FR = rightenv!(AR, M, FR; tol=tol / 10)
+    err = error(AL, C, FL, M, FR)
     return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR), err, tol
 end
 
