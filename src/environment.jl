@@ -379,6 +379,8 @@ function Cenv!(C, FL, FR; kwargs...)
 end
 
 """
+    ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
+
 QR factorization to get `AL` and `AR` from `AC` and `C`
 
 ````
@@ -388,10 +390,8 @@ QR factorization to get `AL` and `AR` from `AC` and `C`
 """
 function ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
     Ni,Nj = size(AL)
-    AC = Array{Array,2}(undef, Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
-        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
-    end
+    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    AC = reshape(ACij,Ni,Nj)
     _, AC = ACenv!(AC, FL, M, FR; kwargs...)
     _, C = Cenv!(C, FL, FR; kwargs...)
 

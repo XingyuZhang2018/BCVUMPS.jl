@@ -8,7 +8,7 @@ function obs_env()
 end
 
 """
-    bcvumps_env(model::MT, Ni, Nj, β, D; tol=1e-10, maxiter=100, verbose = false) where {MT <: HamiltonianModel}
+    bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false) where {MT <: HamiltonianModel}
 
 return the bcvumps environment of the `model` as a function of the inverse
 temperature `β` and the environment bonddimension `D` as calculated with
@@ -35,10 +35,8 @@ return the partition function of the `env`.
 function Z(env::SquareBCVUMPSRuntime)
     M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
     Ni,Nj = size(M)
-    AC = Array{Array,2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
-        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
-    end
+    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    AC = reshape(ACij,Ni,Nj)
     z_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
