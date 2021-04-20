@@ -1,5 +1,7 @@
 using LinearAlgebra
 using KrylovKit
+using Zygote
+@Zygote.nograd _initializect_square
 
 export AbstractLattice, SquareLattice
 abstract type AbstractLattice end
