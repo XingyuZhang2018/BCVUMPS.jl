@@ -20,16 +20,16 @@ a struct to hold the tensors during the `bcvumps` algorithm, each is a `Ni` x `N
 - `D × d' × D` `FR[i,j]` tensor
 and `LT` is a AbstractLattice to define the lattice type.
 """
-struct BCVUMPSRuntime{LT,T,N,AT <: AbstractArray{<:AbstractArray,2},ET}
+struct BCVUMPSRuntime{LT,T,N,AT <: AbstractArray{<:AbstractArray,2},CT,ET}
     M::AT
     AL::ET
-    C::ET
+    C::CT
     AR::ET
     FL::ET
     FR::ET
-    function BCVUMPSRuntime{LT}(M::AT, AL::ET, C::ET, AR::ET, FL::ET, FR::ET) where {LT <: AbstractLattice,AT <: AbstractArray{<:AbstractArray,2},ET <: AbstractArray{<:AbstractArray,2}}
+    function BCVUMPSRuntime{LT}(M::AT, AL::ET, C::CT, AR::ET, FL::ET, FR::ET) where {LT <: AbstractLattice,AT <: AbstractArray{<:AbstractArray,2}, CT <: AbstractArray{<:AbstractArray,2}, ET <: AbstractArray{<:AbstractArray,2}}
         T, N = eltype(M[1,1]), ndims(M[1,1])
-        new{LT,T,N,AT,ET}(M, AL, C, AR, FL, FR)
+        new{LT,T,N,AT,CT,ET}(M, AL, C, AR, FL, FR)
     end
 end
 
@@ -52,7 +52,7 @@ canonical form. `FL,FR` is the left and right environment.
 ```jldoctest; setup = :(using BCVUMPS)
 julia> Ni, Nj = 2, 2;
 
-julia> M = Array{Array,2}(undef, Ni, Nj);
+julia> M = Array{Array{Float64,3},2}(undef, Ni, Nj);
 
 julia> for j = 1:Nj, i = 1:Ni
            M[i,j] = rand(2,2,2,2)
@@ -74,7 +74,7 @@ end
 function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
     T = eltype(M[1,1])
     Ni, Nj = size(M)
-    A = Array{Array,2}(undef, Ni, Nj)
+    A = Array{Array{Float64,3},2}(undef, Ni, Nj)
     for j in 1:Nj, i in 1:Ni
         d = size(M[i,j], 4)
         A[i,j] = rand(T, D, d, D)
@@ -83,7 +83,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     R, AR = rightorth(AL)
     _, FL = leftenv!(AL, M)
     _, FR = rightenv!(AR, M)
-    C = Array{Array,2}(undef, Ni, Nj)
+    C = Array{Array{Float64,2},2}(undef, Ni, Nj)
     for j in 1:Nj,i in 1:Ni
         jr = j + 1 - (j + 1 > Nj) * Nj
         C[i,j] = L[i,j] * R[i,jr]

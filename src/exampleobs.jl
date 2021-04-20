@@ -56,10 +56,8 @@ return the magnetisation of the `model`. Requires that `mag_tensor` are defined 
 function magnetisation(env::SquareBCVUMPSRuntime, model::MT, β) where {MT <: HamiltonianModel}
     M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
     Ni,Nj = size(M)
-    AC = Array{Array,2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
-        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
-    end
+    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    AC = reshape(ACij,Ni,Nj)
     Mag = mag_tensor(model, β)
     mag_tol = 0
     for j = 1:Nj,i = 1:Ni
@@ -81,10 +79,8 @@ vumps. Requires that `model_tensor` are defined for `model`.
 function energy(env::SquareBCVUMPSRuntime, model::MT, β::Real) where {MT <: HamiltonianModel}
     M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
     Ni,Nj = size(M)
-    AC = Array{Array,2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
-        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
-    end
+    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    AC = reshape(ACij,Ni,Nj)
     Ene = energy_tensor(model, β)
     ene_tol = 0
     for j = 1:Nj,i = 1:Ni

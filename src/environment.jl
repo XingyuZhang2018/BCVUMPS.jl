@@ -38,7 +38,7 @@ function lqpos!(A)
 end
 
 function cellones(Ni,Nj,D)
-    Cell = Array{Array,2}(undef, Ni, Nj)
+    Cell = Array{Array{Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         Cell[i,j] = Matrix{Float64}(I, D, D)
     end
@@ -90,8 +90,8 @@ a scalar factor `λ` such that ``λ AR R = L A``
 """
 function getAL(A,L)
     Ni,Nj = size(A)
-    AL = Array{Array,2}(undef, Ni, Nj)
-    Le = Array{Array,2}(undef, Ni, Nj)
+    AL = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    Le = Array{Array{Float64,2},2}(undef, Ni, Nj)
     λ = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         D, d, = size(A[i,j])
@@ -105,7 +105,7 @@ end
 
 function getLsped(Le, A, AL; kwargs...)
     Ni,Nj = size(A)
-    L = Array{Array,2}(undef, Ni, Nj)
+    L = Array{Array{Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         _, Ls, _ = eigsolve(X -> ein"dc,csb,dsa -> ab"(X,A[i,j],conj(AL[i,j])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
         _, L[i,j] = qrpos!(real(Ls[1]))
@@ -143,15 +143,15 @@ provided.
 """
 function rightorth(A,L=cellones(size(A,1),size(A,2),size(A[1,1],1)); tol = 1e-12, maxiter = 100, kwargs...)
     Ni,Nj = size(A)
-    Ar = Array{Array,2}(undef, Ni, Nj)
-    Lr = Array{Array,2}(undef, Ni, Nj)
+    Ar = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    Lr = Array{Array{Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         Ar[i,j] = permutedims(A[i,j],(3,2,1))
         Lr[i,j] = permutedims(L[i,j],(2,1))
     end
     AL, L, λ = leftorth(Ar,Lr; tol = tol, kwargs...)
-    R = Array{Array,2}(undef, Ni, Nj)
-    AR = Array{Array,2}(undef, Ni, Nj)
+    R = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    AR = Array{Array{Float64,3},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         R[i,j] = permutedims(L[i,j],(2,1))
         AR[i,j] = permutedims(AL[i,j],(3,2,1))
@@ -203,7 +203,7 @@ end
 
 function FLint(AL, M)
     Ni,Nj = size(AL)
-    FL = Array{Array,2}(undef, Ni, Nj)
+    FL = Array{Array{Float64,3},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         D = size(AL[i,j],1)
         dL = size(M[i,j],1)
@@ -214,7 +214,7 @@ end
 
 function FRint(AR, M)
     Ni,Nj = size(AR)
-    FR = Array{Array,2}(undef, Ni, Nj)
+    FR = Array{Array{Float64,3},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         D = size(AR[i,j],1)
         dR = size(M[i,j],3)
@@ -378,6 +378,36 @@ function Cenv!(C, FL, FR; kwargs...)
     return λC, C
 end
 
+function ACCtoAL(ACij,Cij)
+    D,d, = size(ACij)
+    QAC, _ = qrpos(reshape(ACij,(D*d, D)))
+    QC, _ = qrpos(Cij)
+    ALij = reshape(QAC*QC', (D, d, D))
+end
+
+function ACCtoAR(ACij,Cijr)
+    D,d, = size(ACij)
+    _, QAC = lqpos(reshape(ACij,(D, d*D)))
+    _, QC = lqpos(Cijr)
+    ARij = reshape(QC'*QAC, (D, d, D))
+end
+
+"""
+    itoir(i,Ni,Nj)
+
+````
+i -> (i,j) -> (i,jr) -> ir
+````
+"""
+function itoir(i,Ni,Nj)
+    Liner = LinearIndices((1:Ni,1:Nj))
+    Cart = CartesianIndices((1:Ni,1:Nj))
+    Index = Cart[i]
+    i,j = Index[1],Index[2]
+    jr = j - 1 + (j==1)*Nj
+    Liner[i,jr]
+end
+
 """
     ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
 
@@ -395,17 +425,10 @@ function ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
     _, AC = ACenv!(AC, FL, M, FR; kwargs...)
     _, C = Cenv!(C, FL, FR; kwargs...)
 
-    for j = 1:Nj,i = 1:Ni
-        D,d, = size(AC[i,j])
-        QAC, _ = qrpos(reshape(AC[i,j],(D*d, D)))
-        QC, _ = qrpos(C[i,j])
-        AL[i,j] = reshape(QAC*QC', (D, d, D))
-
-        jr = j - 1 + (j==1)*Nj
-        _, QAC = lqpos(reshape(AC[i,j],(D, d*D)))
-        _, QC = lqpos(C[i,jr])
-        AR[i,j] = reshape(QC'*QAC, (D, d, D))
-    end
+    ALij = [ACCtoAL(AC[i],C[i]) for i=1:Ni*Nj]
+    AL = reshape(ALij,Ni,Nj)
+    ARij = [ACCtoAR(AC[i],C[itoir(i,Ni,Nj)]) for i=1:Ni*Nj]
+    AR = reshape(ARij,Ni,Nj)
     return AL, C, AR
 end
 
@@ -430,7 +453,7 @@ MAC2 =  FL─ M ──FR  =  λAC  │     │
 """
 function error(AL,C,FL,M,FR)
     Ni,Nj = size(AL)
-    AC = Array{Array,2}(undef, Ni,Nj)
+    AC = Array{Array{Float64,3},2}(undef, Ni,Nj)
     err = 0
     for j = 1:Nj,i = 1:Ni
         AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
