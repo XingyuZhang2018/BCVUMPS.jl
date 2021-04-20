@@ -83,15 +83,13 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     R, AR = rightorth(AL)
     _, FL = leftenv!(AL, M)
     _, FR = rightenv!(AR, M)
-    @Zygote.ignore begin
-        C = Array{Array{Float64,2},2}(undef, Ni, Nj)
-        for j in 1:Nj,i in 1:Ni
-            jr = j + 1 - (j + 1 > Nj) * Nj
-            C[i,j] = L[i,j] * R[i,jr]
-        end
+    C = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    for j in 1:Nj,i in 1:Ni
+        jr = j + 1 - (j + 1 > Nj) * Nj
+        C[i,j] = L[i,j] * R[i,jr]
     end
     verbose && print("random initial bcvumps $(Ni)×$(Nj) environment-> ")
-AL, C, AR, FL, FR
+    AL, C, AR, FL, FR
 end
 
 function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::String, D::Int; verbose=false)
