@@ -1,7 +1,6 @@
 using LinearAlgebra
 using KrylovKit
 using Zygote
-@Zygote.nograd _initializect_square
 
 export AbstractLattice, SquareLattice
 abstract type AbstractLattice end
@@ -100,6 +99,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
     AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
 end
+@Zygote.nograd _initializect_square
 
 function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, verbose=false)
     # initialize
