@@ -55,6 +55,16 @@ function ρmap(ρ,Ai,J)
     return ρ
 end
 
+function initialA(M, D)
+    Ni, Nj = size(M)
+    T = eltype(M[1,1])
+    A = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    for j in 1:Nj, i in 1:Ni
+        d = size(M[i,j], 4)
+        A[i,j] = rand(T, D, d, D)
+    end
+    return A
+end
 """
     getL!(A,L; kwargs...)
 

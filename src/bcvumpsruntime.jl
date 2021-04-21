@@ -72,13 +72,7 @@ function SquareBCVUMPSRuntime(M::AbstractArray{<:AbstractArray,2}, env, D::Int; 
 end
 
 function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
-    T = eltype(M[1,1])
-    Ni, Nj = size(M)
-    A = Array{Array{Float64,3},2}(undef, Ni, Nj)
-    for j in 1:Nj, i in 1:Ni
-        d = size(M[i,j], 4)
-        A[i,j] = rand(T, D, d, D)
-    end
+    A = initialA(M, D)
     AL, L = leftorth(A)
     R, AR = rightorth(AL)
     _, FL = leftenv!(AL, M)
