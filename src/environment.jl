@@ -1,7 +1,6 @@
 using LinearAlgebra
 using KrylovKit
 using Random
-using Zygote
 
 safesign(x::Number) = iszero(x) ? one(x) : sign(x)
 """
@@ -409,6 +408,12 @@ function itoir(i,Ni,Nj)
     Liner[i,jr]
 end
 
+function ALCtoAC(AL,C)
+    Ni,Nj = size(AL)
+    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    reshape(ACij,Ni,Nj)
+end
+
 """
     ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
 
@@ -421,10 +426,7 @@ QR factorization to get `AL` and `AR` from `AC` and `C`
 """
 function ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
     Ni,Nj = size(AL)
-    @Zygote.ignore begin
-        ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
-        AC = reshape(ACij,Ni,Nj)
-    end
+    AC = ALCtoAC(AL,C)
     _, AC = ACenv!(AC, FL, M, FR; kwargs...)
     _, C = Cenv!(C, FL, FR; kwargs...)
 
