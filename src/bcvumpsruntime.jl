@@ -68,10 +68,10 @@ true
 ```
 "
 function SquareBCVUMPSRuntime(M::AbstractArray{<:AbstractArray,2}, env, D::Int; verbose=false)
-    return SquareBCVUMPSRuntime(M, _initializect_square(M, env, D; verbose=verbose)...)
+    return SquareBCVUMPSRuntime(M, initializect_square(M, env, D; verbose=verbose)...)
 end
 
-function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
+function initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
     T = eltype(M[1,1])
     Ni, Nj = size(M)
     A = Array{Array{Float64,3},2}(undef, Ni, Nj)
@@ -92,7 +92,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     AL, C, AR, FL, FR
 end
 
-function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::String, D::Int; verbose=false)
+function initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::String, D::Int; verbose=false)
     env = load(chkp_file)["env"]
     Ni, Nj = size(M)
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
