@@ -160,6 +160,23 @@ function rightorth(A,L=cellones(size(A,1),size(A,2),size(A[1,1],1)); tol = 1e-12
 end
 
 """
+    LRtoC(L,R)
+
+```
+ ── Cᵢⱼ ──  =  ── Lᵢⱼ ── Rᵢⱼ₊₁ ──
+```
+"""
+function LRtoC(L,R)
+    Ni, Nj = size(L)
+    C = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    for j in 1:Nj,i in 1:Ni
+        jr = j + 1 - (j + 1 > Nj) * Nj
+        C[i,j] = L[i,j] * R[i,jr]
+    end
+    return C
+end
+
+"""
     FLmap(ALi, ALip, Mi, FL, J)
 
 ALip means ALᵢ₊₁
