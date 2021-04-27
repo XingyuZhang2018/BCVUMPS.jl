@@ -78,6 +78,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     _, FL = leftenv!(AL, M)
     _, FR = rightenv!(AR, M)
     C = LRtoC(L,R)
+    Ni, Nj = size(M)
     verbose && print("random initial bcvumps $(Ni)×$(Nj) environment-> ")
     AL, C, AR, FL, FR
 end
