@@ -187,45 +187,47 @@ function LRtoC(L,R)
 end
 
 """
-    FLmap(ALi, ALip, Mi, FL, J)
+    FLm = FLmap(ALi, ALip, Mi, FL, J)
 
 ALip means ALᵢ₊₁
 ```
- ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁   ──   ...   
- │     │        │          
-FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...
- │     │        │       
- ┕──  ALᵢ₊₁ⱼ ─ ALᵢ₊₁ⱼ₊₁ ──   ...
+  ┌──        ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁   ──   ...   
+  │          │     │        │          
+ FLm   =   FLᵢⱼ ─ Mᵢⱼ   ── Mᵢⱼ₊₁     ──   ...  
+  │          │     │        │       
+  ┕──        ┕──  ALᵢ₊₁ⱼ ─ ALᵢ₊₁ⱼ₊₁ ──   ...
 ```
 """
 function FLmap(ALi, ALip, Mi, FL, J)
     Nj = size(ALi,1)
+    FLm = copy(FL)
     for j=1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
-        FL = ein"abc,cde,bfhd,afg -> ghe"(FL,ALi[jr],Mi[jr],conj(ALip[jr]))
+        FLm = ein"abc,cde,bfhd,afg -> ghe"(FLm,ALi[jr],Mi[jr],conj(ALip[jr]))
     end
-    return FL
+    return FLm
 end
 
 """
-    FRmap(ARi, ARip, Mi, FR, J)
+    FRm = FRmap(ARi, ARip, Mi, FR, J)
 
 ARip means ARᵢ₊₁
 ```
-   ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
-            │          │      │ 
-   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ
-            │          │      │  
-   ... ─ ARᵢ₊₁ⱼ₋₁ ─ ARᵢ₊₁ⱼ  ──┘ 
+ ──┐       ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
+   │                │          │      │ 
+──FRm  =   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ
+   │                │          │      │  
+ ──┘       ... ─ ARᵢ₊₁ⱼ₋₁ ─ ARᵢ₊₁ⱼ  ──┘ 
 ```
 """
 function FRmap(ARi, ARip, Mi, FR, J)
     Nj = size(ARi,1)
+    FRm = copy(FR)
     for j=1:Nj
         jr = J-(j-1) + (J-(j-1) < 1)*Nj
-        FR = ein"abc,eda,hfbd,gfc -> ehg"(FR,ARi[jr],Mi[jr],conj(ARip[jr]))
+        FRm = ein"abc,eda,hfbd,gfc -> ehg"(FRm,ARi[jr],Mi[jr],conj(ARip[jr]))
     end
-    return FR
+    return FRm
 end
 
 function FLint(AL, M)
@@ -301,51 +303,53 @@ function rightenv!(AR, M, FR = FRint(AR,M); kwargs...)
 end
 
 """
-    ACmap(ACij, FLj, FRj, Mj, II)
+    ACm = ACmap(ACij, FLj, FRj, Mj, II)
 
 ```
-┌─────── ACᵢⱼ ─────┐
-│        │         │          
-FLᵢⱼ ─── Mᵢⱼ ───── FRᵢⱼ
-│        │         │   
-FLᵢ₊₁ⱼ ─ Mᵢ₊₁ⱼ ──  FRᵢ₊₁ⱼ
-│        │         │    
-.        .         .
-.        .         .
-.        .         .
+                                ┌─────── ACᵢⱼ ─────┐
+                                │        │         │          
+┌─────── ACm  ─────┐      =     FLᵢⱼ ─── Mᵢⱼ ───── FRᵢⱼ
+│        │         │            │        │         │   
+                                FLᵢ₊₁ⱼ ─ Mᵢ₊₁ⱼ ──  FRᵢ₊₁ⱼ
+                                │        │         │    
+                                .        .         .
+                                .        .         .
+                                .        .         .
 ```
 """
 function ACmap(ACij, FLj, FRj, Mj, II)
     Ni = size(FLj,1)
+    ACm = copy(ACij)
     for i=1:Ni
         ir = II+i-1 - (II+i-1 > Ni)*Ni
-        ACij = ein"abc,cde,bhfd,efg -> ahg"(FLj[ir],ACij,Mj[ir],FRj[ir])
+        ACm = ein"abc,cde,bhfd,efg -> ahg"(FLj[ir],ACm,Mj[ir],FRj[ir])
     end
-    return ACij
+    return ACm
 end
 
 """
     Cmap(Cij, FLjp, FRj, II)
 
 ```
-┌────Cᵢⱼ ───┐
-│           │          
-FLᵢⱼ₊₁ ──── FRᵢⱼ
-│           │   
-FLᵢ₊₁ⱼ₊₁ ── FRᵢ₊₁ⱼ
-│           │        
-.           .     
-.           .     
-.           .     
+                    ┌────Cᵢⱼ ───┐
+                    │           │          
+┌──── Cm ───┐   =   FLᵢⱼ₊₁ ──── FRᵢⱼ
+│           │       │           │   
+                    FLᵢ₊₁ⱼ₊₁ ── FRᵢ₊₁ⱼ
+                    │           │        
+                    .           .     
+                    .           .     
+                    .           .     
 ```
 """
 function Cmap(Cij, FLjp, FRj, II)
     Ni = size(FLjp,1)
+    Cm = copy(Cij)
     for i=1:Ni
         ir = II+i-1 - (II+i-1 > Ni)*Ni
-        Cij = ein"abc,cd,dbe -> ae"(FLjp[ir],Cij,FRj[ir])
+        Cm = ein"abc,cd,dbe -> ae"(FLjp[ir],Cm,FRj[ir])
     end
-    return Cij
+    return Cm
 end
 
 """
