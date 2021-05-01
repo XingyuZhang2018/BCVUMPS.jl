@@ -43,7 +43,7 @@ function Z(env::SquareBCVUMPSRuntime)
         jr = j + 1 - Nj * (j==Nj)
         z = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
         λ = ein"αcβ,βη,ηcγ,αγ ->"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))[]
-        z_tol += abs(z/λ)
+        z_tol += z/λ
     end
     return z_tol/Ni/Nj
 end
