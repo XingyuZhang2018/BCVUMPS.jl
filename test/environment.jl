@@ -1,6 +1,6 @@
 using Test
 using BCVUMPS
-using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv!,FLmap,rightenv!,FRmap,ACenv!,ACmap,Cenv!,Cmap,ACCtoALAR,error
+using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,ACCtoALAR,error
 using LinearAlgebra
 using OMEinsum
 using Random
@@ -59,9 +59,9 @@ end
     end
 
     AL, = leftorth(A)
-    λL,FL = leftenv!(AL, M)
+    λL,FL = leftenv(AL, M)
     _, AR, = rightorth(A)
-    λR,FR = rightenv!(AR, M)
+    λR,FR = rightenv(AR, M)
 
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
@@ -81,9 +81,9 @@ end
     end
 
     AL, L = leftorth(A)
-    λL,FL = leftenv!(AL, M)
+    λL,FL = leftenv(AL, M)
     R, AR, = rightorth(A)
-    λR,FR = rightenv!(AR, M)
+    λR,FR = rightenv(AR, M)
 
     C = Array{Array,2}(undef, Ni,Nj)
     AC = Array{Array,2}(undef, Ni,Nj)
@@ -92,8 +92,8 @@ end
         C[i,j] = L[i,j] * R[i,jr]
         AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
     end
-    λAC, AC = ACenv!(AC, FL, M, FR)
-    λC, C = Cenv!(C, FL, FR)
+    λAC, AC = ACenv(AC, FL, M, FR)
+    λC, C = Cenv(C, FL, FR)
     for j = 1:Nj, i = 1:Ni
         jr = j + 1 - Nj * (j==Nj)
         @test λAC[i,j] * AC[i,j] ≈ ACmap(AC[i,j], FL[:,j], FR[:,j], M[:,j], i)
@@ -112,9 +112,9 @@ end
     end
 
     AL, L = leftorth(A)
-    λL,FL = leftenv!(AL, M)
+    λL,FL = leftenv(AL, M)
     R, AR, = rightorth(A)
-    λR,FR = rightenv!(AR, M)
+    λR,FR = rightenv(AR, M)
 
     C = Array{Array,2}(undef, Ni,Nj)
     for j = 1:Nj,i = 1:Ni

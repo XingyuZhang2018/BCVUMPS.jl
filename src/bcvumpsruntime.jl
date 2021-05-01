@@ -75,8 +75,8 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     A = initialA(M, D)
     AL, L = leftorth(A)
     R, AR = rightorth(AL)
-    _, FL = leftenv!(AL, M)
-    _, FR = rightenv!(AR, M)
+    _, FL = leftenv(AL, M)
+    _, FR = rightenv(AR, M)
     C = LRtoC(L,R)
     Ni, Nj = size(M)
     verbose && print("random initial bcvumps $(Ni)×$(Nj) environment-> ")
@@ -103,8 +103,8 @@ end
 function bcvumpstep(rt::BCVUMPSRuntime, err, tol)
     M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
     AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR; tol=tol / 10)
-    _, FL = leftenv!(AL, M, FL; tol=tol / 10)
-    _, FR = rightenv!(AR, M, FR; tol=tol / 10)
+    _, FL = leftenv(AL, M, FL; tol=tol / 10)
+    _, FR = rightenv(AR, M, FR; tol=tol / 10)
     err = error(AL, C, FL, M, FR)
     return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR), err, tol
 end

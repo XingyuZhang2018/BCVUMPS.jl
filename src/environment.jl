@@ -265,7 +265,8 @@ FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...  = λLᵢⱼ FLᵢⱼ
  ┕──  ALᵢ₊₁ⱼ ─ ALᵢ₊₁ⱼ₊₁ ──   ...         ┕── 
 ```
 """
-function leftenv!(AL, M, FL = FLint(AL,M); kwargs...)
+leftenv(AL, M, FL = FLint(AL,M); kwargs...) = leftenv!(AL, M, copy(FL); kwargs...)
+function leftenv!(AL, M, FL; kwargs...)
     Ni,Nj = size(AL)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
@@ -290,7 +291,8 @@ of AR - M - conj(AR) contracted along the physical dimension.
    ... ─ ARᵢ₊₁ⱼ₋₁ ─ ARᵢ₊₁ⱼ  ──┘          ──┘  
 ```
 """
-function rightenv!(AR, M, FR = FRint(AR,M); kwargs...)
+rightenv(AR, M, FR = FRint(AR,M); kwargs...) = rightenv!(AR, M, copy(FR); kwargs...)
+function rightenv!(AR, M, FR; kwargs...)
     Ni,Nj = size(AR)
     λR = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
@@ -369,6 +371,7 @@ FLᵢ₊₁ⱼ ─ Mᵢ₊₁ⱼ ──  FRᵢ₊₁ⱼ  =  λACᵢⱼ ┌──
 .        .         .
 ```
 """
+ACenv(AC, FL, M, FR; kwargs...) = ACenv!(copy(AC), FL, M, FR; kwargs...)
 function ACenv!(AC, FL, M, FR; kwargs...)
     Ni,Nj = size(AC)
     λAC = zeros(Ni,Nj)
@@ -397,6 +400,7 @@ FLᵢ₊₁ⱼ₊₁ ── FRᵢ₊₁ⱼ   =  λCᵢⱼ ┌──Cᵢⱼ ─�
 .           .     
 ```
 """
+Cenv(C, FL, FR; kwargs...) = Cenv!(copy(C), FL, FR; kwargs...)
 function Cenv!(C, FL, FR; kwargs...)
     Ni,Nj = size(C)
     λC = zeros(Ni,Nj)
@@ -458,8 +462,8 @@ QR factorization to get `AL` and `AR` from `AC` and `C`
 function ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
     Ni,Nj = size(AL)
     AC = ALCtoAC(AL,C)
-    _, AC = ACenv!(AC, FL, M, FR; kwargs...)
-    _, C = Cenv!(C, FL, FR; kwargs...)
+    _, AC = ACenv(AC, FL, M, FR; kwargs...)
+    _, C = Cenv(C, FL, FR; kwargs...)
 
     ALij = [ACCtoAL(AC[i],C[i]) for i=1:Ni*Nj]
     AL = reshape(ALij,Ni,Nj)
