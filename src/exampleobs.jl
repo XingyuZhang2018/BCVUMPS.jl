@@ -64,9 +64,9 @@ function magnetisation(env::SquareBCVUMPSRuntime, model::MT, β) where {MT <: Ha
         ir = i + 1 - Ni * (i==Ni)
         mag = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Mag[i,j],FR[i,j],conj(AC[ir,j]))[]
         λ = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
-        mag_tol += abs(mag/λ)
+        mag_tol += mag/λ
     end
-    return mag_tol/Ni/Nj
+    return abs(mag_tol)/Ni/Nj
 end
 
 """
