@@ -37,15 +37,15 @@ function Z(env::SquareBCVUMPSRuntime)
     Ni,Nj = size(M)
     ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
     AC = reshape(ACij,Ni,Nj)
-    z_tol = 0
+    z_tol = 1
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         jr = j + 1 - Nj * (j==Nj)
         z = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
         λ = ein"αcβ,βη,ηcγ,αγ ->"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))[]
-        z_tol += z/λ
+        z_tol *= z/λ
     end
-    return z_tol/Ni/Nj
+    return z_tol^(1/Ni/Nj)
 end
 
 """
@@ -126,12 +126,12 @@ return some the numerical integrations of analytical result for the partition fu
 """
 function Zofβ(::Ising,β)
     if β == 0.2
-        return 2.084503739466302
+        return 2.08450374046259
     elseif β == 0.4
-        return 2.409366429881355
+        return 2.4093664345022363
     elseif β == 0.6
-        return 3.3539286440313782
+        return 3.3539286863974582
     elseif β == 0.8
-        return 4.962010437125516
+        return 4.96201030069517
     end
 end
