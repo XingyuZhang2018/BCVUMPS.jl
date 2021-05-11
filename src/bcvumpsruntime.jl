@@ -95,18 +95,18 @@ function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, verbose=false)
     olderror = Inf
 
     stopfun = StopFunction(olderror, -1, tol, maxiter)
-    rt, err = fixedpoint(res -> bcvumpstep(res...), (rt, olderror, tol), stopfun)
+    rt, err = fixedpoint(res -> bcvumpstep(res...), (rt, olderror), stopfun)
     verbose && println("bcvumps done@step: $(stopfun.counter), error=$(err)")
     return rt
 end
 
-function bcvumpstep(rt::BCVUMPSRuntime, err, tol)
+function bcvumpstep(rt::BCVUMPSRuntime, err)
     M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
-    AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR; tol=tol / 10)
-    _, FL = leftenv(AL, M, FL; tol=tol / 10)
-    _, FR = rightenv(AR, M, FR; tol=tol / 10)
+    AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR)
+    _, FL = leftenv(AL, M, FL)
+    _, FR = rightenv(AR, M, FR)
     err = error(AL, C, FL, M, FR)
-    return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR), err, tol
+    return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR), err
 end
 
 
