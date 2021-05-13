@@ -272,8 +272,19 @@ function leftenv!(AL, M, FL; kwargs...)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], AL[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
-        FL[i,j] = real(FL1s[1])
-        λL[i,j] = real(λLs[1])
+        if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-2
+            @show λLs
+            if real(λLs[1]) > 0
+                FL[i,j] = real(FL1s[1])
+                λL[i,j] = real(λLs[1])
+            else
+                FL[i,j] = real(FL1s[2])
+                λL[i,j] = real(λLs[2])
+            end
+        else
+            FL[i,j] = real(FL1s[1])
+            λL[i,j] = real(λLs[1])
+        end
     end
     return λL, FL
 end
@@ -298,8 +309,19 @@ function rightenv!(AR, M, FR; kwargs...)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], AR[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
-        FR[i,j] = real(FR1s[1])
-        λR[i,j] = real(λRs[1])
+        if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-2
+            @show λRs
+            if real(λRs[1]) > 0
+                FR[i,j] = real(FR1s[1])
+                λR[i,j] = real(λRs[1])
+            else
+                FR[i,j] = real(FR1s[2])
+                λR[i,j] = real(λRs[2])
+            end
+        else
+            FR[i,j] = real(FR1s[1])
+            λR[i,j] = real(λRs[1])
+        end
     end
     return λR, FR
 end
@@ -377,8 +399,19 @@ function ACenv!(AC, FL, M, FR; kwargs...)
     λAC = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         λACs, ACs, = eigsolve(X->ACmap(X, FL[:,j], FR[:,j], M[:,j], i), AC[i,j], 1, :LM; ishermitian = false, kwargs...)
-        AC[i,j] = real(ACs[1])
-        λAC[i,j] = real(λACs[1])
+        if length(λACs) > 1 && norm(abs(λACs[1]) - abs(λACs[2])) < 1e-2
+            @show λACs
+            if real(λACs[1]) > 0
+                AC[i,j] = real(ACs[1])
+                λAC[i,j] = real(λACs[1])
+            else
+                AC[i,j] = real(ACs[2])
+                λAC[i,j] = real(λACs[2])
+            end
+        else
+            AC[i,j] = real(ACs[1])
+            λAC[i,j] = real(λACs[1])
+        end
     end
     return λAC, AC
 end
@@ -407,8 +440,19 @@ function Cenv!(C, FL, FR; kwargs...)
     for j = 1:Nj,i = 1:Ni
         jr = j + 1 - (j==Nj) * Nj
         λCs, Cs, = eigsolve(X->Cmap(X, FL[:,jr], FR[:,j], i), C[i,j], 1, :LM; ishermitian = false, kwargs...)
-        C[i,j] = real(Cs[1])
-        λC[i,j] = real(λCs[1])
+        if length(λCs) > 1 && norm(abs(λCs[1]) - abs(λCs[2])) < 1e-2
+            @show λCs
+            if real(λCs[1]) > 0
+                C[i,j] = real(Cs[1])
+                λC[i,j] = real(λCs[1])
+            else
+                C[i,j] = real(Cs[2])
+                λC[i,j] = real(λCs[2])
+            end
+        else
+            C[i,j] = real(Cs[1])
+            λC[i,j] = real(λCs[1])
+        end
     end
     return λC, C
 end
