@@ -80,7 +80,6 @@ If ρ is not exactly positive definite, cholesky will fail
 """
 function getL!(A,L; kwargs...)
     Ni,Nj = size(A)
-    D = size(A[1,1],1)
     for j = 1:Nj, i = 1:Ni
         _,ρs,_ = eigsolve(ρ->ρmap(ρ,A[i,:],j), L[i,j]'*L[i,j], 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
         ρ = real(ρs[1] + ρs[1]')
@@ -290,7 +289,7 @@ function leftenv!(AL, M, FL; kwargs...)
 end
 
 """
-    rightenv!(AR, M, FR = FRint(AR,M); kwargs...)
+    λR, FR = rightenv(AR, M, FR = FRint(AR,M); kwargs...)
 
 Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
 of AR - M - conj(AR) contracted along the physical dimension.
@@ -461,14 +460,14 @@ function ACCtoAL(ACij,Cij)
     D,d, = size(ACij)
     QAC, _ = qrpos(reshape(ACij,(D*d, D)))
     QC, _ = qrpos(Cij)
-    ALij = reshape(QAC*QC', (D, d, D))
+    reshape(QAC*QC', (D, d, D))
 end
 
 function ACCtoAR(ACij,Cijr)
     D,d, = size(ACij)
     _, QAC = lqpos(reshape(ACij,(D, d*D)))
     _, QC = lqpos(Cijr)
-    ARij = reshape(QC'*QAC, (D, d, D))
+    reshape(QC'*QAC, (D, d, D))
 end
 
 """
@@ -546,4 +545,163 @@ function error(AL,C,FL,M,FR)
         err += norm(MAC)
     end
     return err
+end
+
+function BgFLint(AL, M)
+    Ni,Nj = size(AL)
+    BgFL = Array{Array{Float64,4},2}(undef, Ni, Nj)
+    for j = 1:Nj,i = 1:Ni
+        ir = i + 1 - Ni * (i==Ni)
+        irr = i + 2 - Ni * (i + 2 > Ni)
+        D1 = size(AL[i,j],1)
+        D2 = size(AL[irr,j],1)
+        dL1 = size(M[i,j],1)
+        dL2 = size(M[ir,j],1)
+        BgFL[i,j] = rand(Float64, D1, dL1, dL2, D2)
+    end
+    return BgFL
+end
+
+"""
+    BgFLm = BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
+
+ALip means ALᵢ₊₂
+Mip means Mᵢ₊₁
+```
+  ┌──        ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ...   
+  │          │     │        │          
+  │          │  ─ Mᵢⱼ   ── Mᵢⱼ₊₁     ──   ...  
+BgFLm   =  BgFLᵢⱼ  │        │       
+  │          │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...  
+  │          │     │        │       
+  ┕──        ┕──  ALᵢ₊₂ⱼ ─ ALᵢ₊₂ⱼ₊₁  ──   ... 
+```
+"""
+function BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
+    Nj = size(ALi,1)
+    BgFLm = copy(BgFLij)
+    for j=1:Nj
+        jr = J+j-1 - (J+j-1 > Nj)*Nj
+        BgFLm = ein"dcba,def,ckge,bjhk,aji -> fghi"(BgFLm,ALi[jr],Mi[jr],Mip[jr],conj(ALip[jr]))
+    end
+    return BgFLm
+end
+
+"""
+    λL, BgFL = bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...)  
+
+Compute the left environment tensor for MPS A and MPO M, by finding the left fixed point
+of AL - M - M - conj(AL) contracted along the physical dimension.
+```
+   ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ...           ┌── 
+   │     │        │                           │   
+   │  ─ Mᵢⱼ   ── Mᵢⱼ₊₁     ──   ...           │   
+ BgFLᵢⱼ  │        │                   = λLᵢⱼ BgFLᵢⱼ
+   │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...           │   
+   │     │        │                           │   
+   ┕──  ALᵢ₊₂ⱼ ─ ALᵢ₊₂ⱼ₊₁  ──   ...           ┕── 
+```
+"""
+bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...) = bigleftenv!(AL, M, copy(BgFL); kwargs...)
+function bigleftenv!(AL, M, BgFL; kwargs...)
+    Ni,Nj = size(AL)
+    λL = zeros(Ni,Nj)
+    for j = 1:Nj,i = 1:Ni
+        ir = i + 1 - Ni * (i==Ni)
+        irr = i + 2 - Ni * (i + 2 > Ni)
+        λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[irr,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
+            @show λLs
+            if real(λLs[1]) > 0
+                BgFL[i,j] = real(BgFL1s[1])
+                λL[i,j] = real(λLs[1])
+            else
+                BgFL[i,j] = real(BgFL1s[2])
+                λL[i,j] = real(λLs[2])
+            end
+        else
+            BgFL[i,j] = real(BgFL1s[1])
+            λL[i,j] = real(λLs[1])
+        end
+    end
+    return λL, BgFL
+end
+
+function BgFRint(AR, M)
+    Ni,Nj = size(AR)
+    BgFR = Array{Array{Float64,4},2}(undef, Ni, Nj)
+    for j = 1:Nj,i = 1:Ni
+        ir = i + 1 - Ni * (i==Ni)
+        irr = i + 2 - Ni * (i + 2 > Ni)
+        D1 = size(AR[i,j],3)
+        D2 = size(AR[irr,j],3)
+        dR1 = size(M[i,j],3)
+        dR2 = size(M[ir,j],3)
+        BgFR[i,j] = rand(Float64, D1, dR1, dR2, D2)
+    end
+    return BgFR
+end
+
+"""
+    FRm = FRmap(ARi, ARip, Mi, FR, J)
+
+ARip means ARᵢ₊₁
+```
+ ──┐          ...  ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
+   │                    │          │      │ 
+ ──│          ... ──── Mᵢⱼ₋₁  ──  Mᵢⱼ   ──│
+  BgFRm   =             │          │     BgFRm
+ ──│          ... ──── Mᵢ₊₁ⱼ₋₁ ── Mᵢ₊₁ⱼ ──│
+   │                    │          │      │     
+ ──┘          ...  ─ ARᵢ₊₂ⱼ₋₁ ─── ARᵢ₊₂ⱼ──┘ 
+```
+"""
+function BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
+    Nj = size(ARi,1)
+    BgFRm = copy(BgFR)
+    for j=1:Nj
+        jr = J-(j-1) + (J-(j-1) < 1)*Nj
+        BgFRm = ein"fghi,def,ckge,bjhk,aji -> dcba"(BgFRm,ARi[jr],Mi[jr],Mip[jr],conj(ARip[jr]))
+    end
+    return BgFRm
+end
+
+"""
+    λR, BgFR = bigrightenv(AR, M, BgFR = BgFRint(AR,M); kwargs...)
+
+Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
+of AR - M - M - conj(AR) contracted along the physical dimension.
+```
+     ──┐          ...  ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
+       │                    │          │      │ 
+     ──│          ... ──── Mᵢⱼ₋₁  ──  Mᵢⱼ   ──│
+λRᵢⱼ BgFRᵢⱼ   =             │          │     BgFRᵢⱼ
+     ──│          ... ──── Mᵢ₊₁ⱼ₋₁ ── Mᵢ₊₁ⱼ ──│
+       │                    │          │      │     
+     ──┘          ...  ─ ARᵢ₊₂ⱼ₋₁ ─── ARᵢ₊₂ⱼ──┘ 
+```
+"""
+bigrightenv(AR, M, BgFR = BgFRint(AR,M); kwargs...) = bigrightenv!(AR, M, copy(BgFR); kwargs...)
+function bigrightenv!(AR, M, BgFR; kwargs...)
+    Ni,Nj = size(AR)
+    λR = zeros(Ni,Nj)
+    for j = 1:Nj,i = 1:Ni
+        ir = i + 1 - Ni * (i==Ni)
+        irr = i + 2 - Ni * (i + 2 > Ni)
+        λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[irr,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
+            @show λRs
+            if real(λRs[1]) > 0
+                BgFR[i,j] = real(BgFR1s[1])
+                λR[i,j] = real(λRs[1])
+            else
+                BgFR[i,j] = real(BgFR1s[2])
+                λR[i,j] = real(λRs[2])
+            end
+        else
+            BgFR[i,j] = real(BgFR1s[1])
+            λR[i,j] = real(λRs[1])
+        end
+    end
+    return λR, BgFR
 end
