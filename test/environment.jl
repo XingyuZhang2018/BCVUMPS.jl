@@ -1,6 +1,6 @@
 using Test
 using BCVUMPS
-using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,ACCtoALAR,error,bigleftenv,BgFLmap,bigrightenv,BgFRmap
+using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap
 using LinearAlgebra
 using OMEinsum
 using Random
@@ -125,6 +125,28 @@ end
     AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR)
     err = error(AL,C,FL,M,FR)
     @test err !== nothing
+end
+
+@testset "obsleftenv and obsrightenv" for Ni = [2], Nj = [2]
+    Random.seed!(50)
+    D, d = 5, 2
+    A = Array{Array,2}(undef, Ni, Nj)
+    M = Array{Array,2}(undef, Ni, Nj)
+    for j = 1:Nj, i = 1:Ni
+        A[i,j] = rand(D, d, D)
+        M[i,j] = rand(2,2,2,2)
+    end
+
+    AL, = leftorth(A)
+    λL,FL = obs2x2FL(AL, M)
+    _, AR, = rightorth(A)
+    λR,FR = obs2x2FR(AR, M)
+
+    for j = 1:Nj, i = 1:Ni
+        ir = i + 1 - Ni * (i==Ni)
+        @test λL[i,j] * FL[i,j] ≈ FLmap(AL[i,:], AL[i,:], M[i,:], FL[i,j], j)
+        @test λR[i,j] * FR[i,j] ≈ FRmap(AR[i,:], AR[i,:], M[i,:], FR[i,j], j)
+    end
 end
 
 @testset "bigleftenv and bigrightenv" for Ni = [2,3], Nj = [2,3]

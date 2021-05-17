@@ -252,7 +252,7 @@ function FRint(AR, M)
 end
 
 """
-    leftenv!(AL, M, FL = FLint(AL,M); kwargs...)
+    λL, FL = leftenv(AL, M, FL = FLint(AL,M); kwargs...) 
 
 Compute the left environment tensor for MPS A and MPO M, by finding the left fixed point
 of AL - M - conj(AL) contracted along the physical dimension.
@@ -545,6 +545,83 @@ function error(AL,C,FL,M,FR)
         err += norm(MAC)
     end
     return err
+end
+
+"""
+    obs_env()
+
+If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
+"""
+function obs_env() end
+
+"""
+    λL, FL = obs2x2FL()
+
+This function is designed specifically for 2x2 longitudinally symmetric cell to get correct `FL` environment.
+```
+ ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁   ──   ...         ┌── 
+ │     │        │                        │   
+FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...  = λLᵢⱼ FLᵢⱼ 
+ │     │        │                        │   
+ ┕──  ALᵢⱼ  ─  ALᵢⱼ₊₁   ──   ...         ┕── 
+```
+"""
+obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...) = obs2x2FL!(AL, M, copy(FL); kwargs...)
+function obs2x2FL!(AL, M, FL; kwargs...)
+    Ni,Nj = size(AL)
+    λL = zeros(Ni,Nj)
+    for j = 1:Nj,i = 1:Ni
+        λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], AL[i,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
+            @show λLs
+            if real(λLs[1]) > 0
+                FL[i,j] = real(FL1s[1])
+                λL[i,j] = real(λLs[1])
+            else
+                FL[i,j] = real(FL1s[2])
+                λL[i,j] = real(λLs[2])
+            end
+        else
+            FL[i,j] = real(FL1s[1])
+            λL[i,j] = real(λLs[1])
+        end
+    end
+    return λL, FL
+end
+
+"""
+    λR, FR = obs2x2FR(AR, M, FR = FRint(AR,M); kwargs...)
+
+This function is designed specifically for 2x2 longitudinally symmetric cell to get correct `FL` environment.
+```
+   ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐          ──┐   
+            │          │      │            │  
+   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ  = λRᵢⱼ──FRᵢⱼ
+            │          │      │            │  
+   ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┘          ──┘  
+```
+"""
+obs2x2FR(AR, M, FR = FRint(AR,M); kwargs...) = obs2x2FR!(AR, M, copy(FR); kwargs...)
+function obs2x2FR!(AR, M, FR; kwargs...)
+    Ni,Nj = size(AR)
+    λR = zeros(Ni,Nj)
+    for j = 1:Nj,i = 1:Ni
+        λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], AR[i,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
+            @show λRs
+            if real(λRs[1]) > 0
+                FR[i,j] = real(FR1s[1])
+                λR[i,j] = real(λRs[1])
+            else
+                FR[i,j] = real(FR1s[2])
+                λR[i,j] = real(λRs[2])
+            end
+        else
+            FR[i,j] = real(FR1s[1])
+            λR[i,j] = real(λRs[1])
+        end
+    end
+    return λR, FR
 end
 
 function BgFLint(AL, M)

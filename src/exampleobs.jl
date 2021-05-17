@@ -1,13 +1,4 @@
 """
-    obs_env()
-
-If `Ni,Nj>2` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
-"""
-function obs_env()
-    
-end
-
-"""
     bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false) where {MT <: HamiltonianModel}
 
 return the bcvumps environment of the `model` as a function of the inverse
