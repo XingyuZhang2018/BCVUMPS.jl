@@ -555,7 +555,7 @@ If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment ar
 function obs_env() end
 
 """
-    λL, FL = obs2x2FL()
+    λL, FL = obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...)
 
 This function is designed specifically for 2x2 longitudinally symmetric cell to get correct `FL` environment.
 ```
@@ -685,8 +685,8 @@ function bigleftenv!(AL, M, BgFL; kwargs...)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        irr = i + 2 - Ni * (i + 2 > Ni)
-        λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[irr,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        # irr = i + 2 - Ni * (i + 2 > Ni)
+        λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[ir,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
             if real(λLs[1]) > 0
@@ -764,8 +764,8 @@ function bigrightenv!(AR, M, BgFR; kwargs...)
     λR = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        irr = i + 2 - Ni * (i + 2 > Ni)
-        λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[irr,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        # irr = i + 2 - Ni * (i + 2 > Ni)
+        λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[ir,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs
             if real(λRs[1]) > 0
