@@ -685,7 +685,7 @@ function bigleftenv!(AL, M, BgFL; kwargs...)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        # irr = i + 2 - Ni * (i + 2 > Ni)
+        # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
         λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[ir,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
@@ -764,7 +764,7 @@ function bigrightenv!(AR, M, BgFR; kwargs...)
     λR = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        # irr = i + 2 - Ni * (i + 2 > Ni)
+        # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
         λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[ir,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs

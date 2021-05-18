@@ -9,7 +9,7 @@ In this package we implemented the algorithms described in [non-trivial-VUMPS](h
 
 ## install
 ```shell
-> git clone https://github.com/XingyuZhang2018/BCVUMPS
+> git clone https://github.com/XingyuZhang2018/BCVUMPS.jl
 ```
 move to the file and run `julia REPL`, press `]` into `Pkg REPL`
 ```julia
@@ -27,7 +27,7 @@ julia> using BCVUMPS
 If you want to learn deeply into this package, I highly recommend to run each single test in `/test/runtests` in sequence.
 
 ### 2D Classical Ising Model
-Although it's not necessity to using big cell to calculate 2d classical ising model because its configuration is trivial, it's a good test and be familiar with the program.
+Although it's not necessity to using big cell to calculate 2d classical ferromagnetic ising model because its configuration is trivial, it's a good test and be familiar with the program.
 
 We start by constructing the tensor for the tensor network representation of the 2d classical Ising Model.
 This tensor can be constructed using the `model_tensor`-function that takes a `model`-parameter - in our case `Ising()` - and an inverse temperature `β` (e.g. at `β=0.5`). `Ising(Ni,Nj)` means copy the ising tensor to a `Ni ×Nj` big cell. (e.g. `Ising(2,2)`)
@@ -70,11 +70,14 @@ julia> M = model_tensor(Ising22(2), 0.35);
 julia> size(M)
 (2,2)
 
-julia> env = bcvumps_env(Ising22(2),0.35,2; verbose = true);
+julia> env = bcvumps_env(Ising22(2.0),0.35,2; verbose = true);
 bcvumps 2×2 environment load from ./data/Ising22(2, 2, 2)_β0.35_D2.jld2 -> bcvumps done@step: 20, error=4.866624267867332e-11
 
 julia> magnetisation(env,Ising22(2),0.35)
 0.8983102051668891
+
+julia> energy(env,Ising22(2),0.35)
+-2.6443857232112182
 ```
 We can compare this result with MCMC by `MCMC`-function.
 ```
