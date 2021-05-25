@@ -29,7 +29,7 @@ end
     for β = 0.4:0.2:0.8
         env = bcvumps_env(model, β, 10; tol=1e-10, maxiter=20, verbose = false)
         mag22,ene22 = MCMC(model,16,β,10000,100000)
-        @test isapprox(magnetisation(env,model,β), mag22, atol=1e-3)
-        @test isapprox(energy(env,model,β), ene22, atol=1e-3)
+        @test isapprox(magnetisation(env,model,β), mag22, atol=1e-2)
+        @test isapprox(energy(env,model,β), ene22, atol=1e-2)
     end
 end
