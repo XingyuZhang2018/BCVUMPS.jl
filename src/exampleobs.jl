@@ -5,8 +5,8 @@ return the bcvumps environment of the `model` as a function of the inverse
 temperature `β` and the environment bonddimension `D` as calculated with
 vumps. Save `env` in file `./data/model_β_D.jld2`. Requires that `model_tensor` are defined for `model`.
 """
-function bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false) where {MT <: HamiltonianModel}
-    M = model_tensor(model, β)
+function bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false, atype = Array) where {MT <: HamiltonianModel}
+    M = model_tensor(model, β; atype = atype)
     mkpath("./data/")
     chkp_file = "./data/$(model)_β$(β)_D$(D).jld2"
     if isfile(chkp_file)                               
@@ -32,8 +32,8 @@ function Z(env::SquareBCVUMPSRuntime)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         jr = j + 1 - Nj * (j==Nj)
-        z = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
-        λ = ein"αcβ,βη,ηcγ,αγ ->"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))[]
+        z = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j])))[]
+        λ = Array(ein"αcβ,βη,ηcγ,αγ ->"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j])))[]
         z_tol *= z/λ
     end
     return z_tol^(1/Ni/Nj)
@@ -49,12 +49,12 @@ function magnetisation(env::SquareBCVUMPSRuntime, model::MT, β) where {MT <: Ha
     Ni,Nj = size(M)
     ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
     AC = reshape(ACij,Ni,Nj)
-    Mag = mag_tensor(model, β)
+    Mag = mag_tensor(model, β; atype = _arraytype(M[1,1]))
     mag_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        mag = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Mag[i,j],FR[i,j],conj(AC[ir,j]))[]
-        λ = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
+        mag = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Mag[i,j],FR[i,j],conj(AC[ir,j])))[]
+        λ = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j])))[]
         mag_tol += mag/λ
     end
     return abs(mag_tol)/Ni/Nj
@@ -72,12 +72,12 @@ function energy(env::SquareBCVUMPSRuntime, model::MT, β::Real) where {MT <: Ham
     Ni,Nj = size(M)
     ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
     AC = reshape(ACij,Ni,Nj)
-    Ene = energy_tensor(model, β)
+    Ene = energy_tensor(model, β; atype = _arraytype(M[1,1]))
     ene_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        ene = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Ene[i,j],FR[i,j],conj(AC[ir,j]))[]
-        λ = ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))[]
+        ene = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Ene[i,j],FR[i,j],conj(AC[ir,j])))[]
+        λ = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j])))[]
         ene_tol += ene/λ
     end
     return ene_tol/Ni/Nj

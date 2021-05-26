@@ -1,32 +1,36 @@
-using Test
 using BCVUMPS
-using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap
+using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap
+using CUDA
 using LinearAlgebra
-using OMEinsum
 using Random
+using Test
+using OMEinsum
+CUDA.allowscalar(false)
 
-@testset "qr" begin
-    A = rand(ComplexF64,4,4)
+@testset "qr with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64]
+    Random.seed!(100)
+    A = atype(rand(dtype, 4,4))
     Q, R = qrpos(A)
     @test Array(Q*R) ≈ Array(A)
     @test all(real.(diag(R)) .> 0)
     @test all(imag.(diag(R)) .≈ 0)
 end
 
-@testset "lq" begin
-    A = rand(ComplexF64,4,4)
+@testset "lq with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64]
+    Random.seed!(100)
+    A = atype(rand(dtype, 4,4))
     L, Q = lqpos(A)
     @test Array(L*Q) ≈ Array(A)
     @test all(real.(diag(L)) .> 0)
     @test all(imag.(diag(L)) .≈ 0)
 end
 
-@testset "leftorth and rightorth" for Ni = [2,3], Nj = [2,3]
-    Random.seed!(50)
+@testset "leftorth and rightorth with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
+    Random.seed!(100)
     D, d = 5, 2
-    A = Array{Array,2}(undef, Ni, Nj)
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
     for j = 1:Nj, i = 1:Ni
-        A[i,j] = rand(D, d, D)
+        A[i,j] = atype(rand(dtype, D, d, D))
     end
     AL, L, λ = leftorth(A)
     R, AR, λ = rightorth(A)
@@ -48,14 +52,14 @@ end
     end
 end
 
-@testset "leftenv and rightenv" for Ni = [2,3], Nj = [2,3]
+@testset "leftenv and rightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
-    A = Array{Array,2}(undef, Ni, Nj)
-    M = Array{Array,2}(undef, Ni, Nj)
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    M = Array{atype{dtype,4},2}(undef, Ni, Nj)
     for j = 1:Nj, i = 1:Ni
-        A[i,j] = rand(D, d, D)
-        M[i,j] = rand(2,2,2,2)
+        A[i,j] = atype(rand(dtype, D, d, D))
+        M[i,j] = atype(rand(dtype, d, d, d, d))
     end
 
     AL, = leftorth(A)
@@ -70,14 +74,14 @@ end
     end
 end
 
-@testset "ACenv and Cenv" for Ni = [2,3], Nj = [2,3]
+@testset "ACenv and Cenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
-    A = Array{Array,2}(undef, Ni, Nj)
-    M = Array{Array,2}(undef, Ni, Nj)
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    M = Array{atype{dtype,4},2}(undef, Ni, Nj)
     for j = 1:Nj, i = 1:Ni
-        A[i,j] = rand(D, d, D)
-        M[i,j] = rand(2,2,2,2)
+        A[i,j] = atype(rand(dtype, D, d, D))
+        M[i,j] = atype(rand(dtype, d, d, d, d))
     end
 
     AL, L = leftorth(A)
@@ -85,13 +89,9 @@ end
     R, AR, = rightorth(A)
     λR,FR = rightenv(AR, M)
 
-    C = Array{Array,2}(undef, Ni,Nj)
-    AC = Array{Array,2}(undef, Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
-        jr = j + 1 - (j+1>Nj) * Nj
-        C[i,j] = L[i,j] * R[i,jr]
-        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
-    end
+    C = LRtoC(L, R)
+    AC = ALCtoAC(AL, C)
+
     λAC, AC = ACenv(AC, FL, M, FR)
     λC, C = Cenv(C, FL, FR)
     for j = 1:Nj, i = 1:Ni
@@ -101,14 +101,14 @@ end
     end
 end
 
-@testset "bcvumps unit test" for Ni = [2,3], Nj = [2,3]
+@testset "bcvumps unit test with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
-    A = Array{Array,2}(undef, Ni, Nj)
-    M = Array{Array,2}(undef, Ni, Nj)
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    M = Array{atype{dtype,4},2}(undef, Ni, Nj)
     for j = 1:Nj, i = 1:Ni
-        A[i,j] = rand(D, d, D)
-        M[i,j] = rand(2,2,2,2)
+        A[i,j] = atype(rand(dtype, D, d, D))
+        M[i,j] = atype(rand(dtype, d, d, d, d))
     end
 
     AL, L = leftorth(A)
@@ -116,25 +116,21 @@ end
     R, AR, = rightorth(A)
     λR,FR = rightenv(AR, M)
 
-    C = Array{Array,2}(undef, Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
-        jr = j + 1 - (j+1>Nj) * Nj
-        C[i,j] = L[i,j] * R[i,jr]
-    end
+    C = LRtoC(L,R)
 
     AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR)
     err = error(AL,C,FL,M,FR)
     @test err !== nothing
 end
 
-@testset "obsleftenv and obsrightenv" for Ni = [2], Nj = [2]
+@testset "obsleftenv and obsrightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
-    A = Array{Array,2}(undef, Ni, Nj)
-    M = Array{Array,2}(undef, Ni, Nj)
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    M = Array{atype{dtype,4},2}(undef, Ni, Nj)
     for j = 1:Nj, i = 1:Ni
-        A[i,j] = rand(D, d, D)
-        M[i,j] = rand(2,2,2,2)
+        A[i,j] = atype(rand(dtype, D, d, D))
+        M[i,j] = atype(rand(dtype, d, d, d, d))
     end
 
     AL, = leftorth(A)
@@ -149,14 +145,14 @@ end
     end
 end
 
-@testset "bigleftenv and bigrightenv" for Ni = [2,3], Nj = [2,3]
+@testset "bigleftenv and bigrightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
-    A = Array{Array,2}(undef, Ni, Nj)
-    M = Array{Array,2}(undef, Ni, Nj)
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    M = Array{atype{dtype,4},2}(undef, Ni, Nj)
     for j = 1:Nj, i = 1:Ni
-        A[i,j] = rand(D, d, D)
-        M[i,j] = rand(2,2,2,2)
+        A[i,j] = atype(rand(dtype, D, d, D))
+        M[i,j] = atype(rand(dtype, d, d, d, d))
     end
 
     AL, = leftorth(A)

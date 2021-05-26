@@ -7,6 +7,7 @@ export bcvumps, bcvumps_env, magnetisation, magofβ, energy, eneofβ
 export MCMC
 
 include("hamiltonianmodels.jl")
+include("cuda_patch.jl")
 include("fixedpoint.jl")
 include("environment.jl")
 include("bcvumpsruntime.jl")

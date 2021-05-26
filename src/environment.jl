@@ -2,7 +2,9 @@ using LinearAlgebra
 using KrylovKit
 using Random
 
+#https://github.com/JuliaGPU/CuArrays.jl/issues/283
 safesign(x::Number) = iszero(x) ? one(x) : sign(x)
+CUDA.@cufunc safesign(x::CublasFloat) = iszero(x) ? one(x) : x/abs(x)
 """
     qrpos(A)
 
@@ -11,8 +13,9 @@ is guaranteed to have positive diagonal elements.
 """
 qrpos(A) = qrpos!(copy(A))
 function qrpos!(A)
-    F = qr!(A)
-    Q = Matrix(F.Q)
+    mattype = _mattype(A)
+    F = qr!(mattype(A))
+    Q = mattype(F.Q)
     R = F.R
     phases = safesign.(diag(R))
     rmul!(Q, Diagonal(phases))
@@ -28,19 +31,22 @@ is guaranteed to have positive diagonal elements.
 """
 lqpos(A) = lqpos!(copy(A))
 function lqpos!(A)
-    F = qr!(Matrix(A'))
-    Q = Matrix(Matrix(F.Q)')
-    L = Matrix(F.R')
+    mattype = _mattype(A)
+    F = qr!(mattype(A'))
+    Q = mattype(mattype(F.Q)')
+    L = mattype(F.R')
     phases = safesign.(diag(L))
     lmul!(Diagonal(phases), Q)
     rmul!(L, Diagonal(conj!(phases)))
     return L, Q
 end
 
-function cellones(Ni,Nj,D)
-    Cell = Array{Array{Float64,2},2}(undef, Ni, Nj)
+function cellones(A)
+    Ni, Nj = size(A)
+    D = size(A[1,1],1)
+    Cell = Array{_arraytype(A[1,1]){Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
-        Cell[i,j] = Matrix{Float64}(I, D, D)
+        Cell[i,j] = _mattype(A){Float64}(I, D, D)
     end
     return Cell
 end
@@ -50,18 +56,17 @@ function ρmap(ρ,Ai,J)
     for j = 1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
         ρ = ein"dc,csb,dsa -> ab"(ρ,Ai[jr],conj(Ai[jr]))
-        # @tensor ρ[a,b] := ρ[a',b']*Ai[jr][b',s,b]*conj(Ai[jr][a',s,a])
     end
     return ρ
 end
 
 function initialA(M, D)
     Ni, Nj = size(M)
-    T = eltype(M[1,1])
-    A = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    arraytype = _arraytype(M[1,1])
+    A = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
     for j in 1:Nj, i in 1:Ni
         d = size(M[i,j], 4)
-        A[i,j] = rand(T, D, d, D)
+        A[i,j] = arraytype(rand(D, d, D))
     end
     return A
 end
@@ -99,8 +104,9 @@ a scalar factor `λ` such that ``λ AR R = L A``
 """
 function getAL(A,L)
     Ni,Nj = size(A)
-    AL = Array{Array{Float64,3},2}(undef, Ni, Nj)
-    Le = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    arraytype = _arraytype(A[1,1])
+    AL = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
+    Le = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
     λ = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         D, d, = size(A[i,j])
@@ -114,7 +120,7 @@ end
 
 function getLsped(Le, A, AL; kwargs...)
     Ni,Nj = size(A)
-    L = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    L = Array{_arraytype(A[1,1]){Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         _, Ls, _ = eigsolve(X -> ein"dc,csb,dsa -> ab"(X,A[i,j],conj(AL[i,j])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
         _, L[i,j] = qrpos!(real(Ls[1]))
@@ -129,9 +135,9 @@ Given an MPS tensor `A`, return a left-canonical MPS tensor `AL`, a gauge transf
 a scalar factor `λ` such that ``λ AL L = L A``, where an initial guess for `L` can be
 provided.
 """
-function leftorth(A,L=cellones(size(A,1),size(A,2),size(A[1,1],1)); tol = 1e-12, maxiter = 100, kwargs...)
+function leftorth(A,L=cellones(A); tol = 1e-12, maxiter = 100, kwargs...)
     L = getL!(A,L; kwargs...)
-    AL, Le, λ= getAL(A,L;kwargs...)
+    AL, Le, λ = getAL(A,L;kwargs...)
     numiter = 1
     while norm(L.-Le) > tol && numiter < maxiter
         L = getLsped(Le, A, AL; kwargs...)
@@ -150,17 +156,18 @@ Given an MPS tensor `A`, return a gauge transform R, a right-canonical MPS tenso
 a scalar factor `λ` such that ``λ R AR^s = A^s R``, where an initial guess for `R` can be
 provided.
 """
-function rightorth(A,L=cellones(size(A,1),size(A,2),size(A[1,1],1)); tol = 1e-12, maxiter = 100, kwargs...)
+function rightorth(A,L=cellones(A); tol = 1e-12, maxiter = 100, kwargs...)
     Ni,Nj = size(A)
-    Ar = Array{Array{Float64,3},2}(undef, Ni, Nj)
-    Lr = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    arraytype = _arraytype(A[1,1])
+    Ar = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
+    Lr = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         Ar[i,j] = permutedims(A[i,j],(3,2,1))
         Lr[i,j] = permutedims(L[i,j],(2,1))
     end
-    AL, L, λ = leftorth(Ar,Lr; tol = tol, kwargs...)
-    R = Array{Array{Float64,2},2}(undef, Ni, Nj)
-    AR = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    AL, L, λ = leftorth(Ar,Lr; tol = tol, maxiter = maxiter, kwargs...)
+    R = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
+    AR = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         R[i,j] = permutedims(L[i,j],(2,1))
         AR[i,j] = permutedims(AL[i,j],(3,2,1))
@@ -175,9 +182,10 @@ end
  ── Cᵢⱼ ──  =  ── Lᵢⱼ ── Rᵢⱼ₊₁ ──
 ```
 """
-function LRtoC(L,R)
+function LRtoC(L, R)
     Ni, Nj = size(L)
-    C = Array{Array{Float64,2},2}(undef, Ni, Nj)
+    arraytype = _arraytype(L[1,1])
+    C = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
     for j in 1:Nj,i in 1:Ni
         jr = j + 1 - (j + 1 > Nj) * Nj
         C[i,j] = L[i,j] * R[i,jr]
@@ -231,22 +239,24 @@ end
 
 function FLint(AL, M)
     Ni,Nj = size(AL)
-    FL = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    arraytype = _arraytype(AL[1,1])
+    FL = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         D = size(AL[i,j],1)
         dL = size(M[i,j],1)
-        FL[i,j] = rand(Float64, D, dL, D)
+        FL[i,j] = arraytype(rand(Float64, D, dL, D))
     end
     return FL
 end
 
 function FRint(AR, M)
     Ni,Nj = size(AR)
-    FR = Array{Array{Float64,3},2}(undef, Ni, Nj)
+    arraytype = _arraytype(AR[1,1])
+    FR = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         D = size(AR[i,j],1)
         dR = size(M[i,j],3)
-        FR[i,j] = rand(Float64, D, dR, D)
+        FR[i,j] = arraytype(rand(Float64, D, dR, D))
     end
     return FR
 end
@@ -536,10 +546,9 @@ MAC2 =  FL─ M ──FR  =  λAC  │     │
 """
 function error(AL,C,FL,M,FR)
     Ni,Nj = size(AL)
-    AC = Array{Array{Float64,3},2}(undef, Ni,Nj)
+    AC = ALCtoAC(AL, C)
     err = 0
     for j = 1:Nj,i = 1:Ni
-        AC[i,j] = ein"asc,cb -> asb"(AL[i,j],C[i,j])
         MAC = ACmap(AC[i,j], FL[:,j], FR[:,j], M[:,j], i)
         MAC -= ein"asd,cpd,cpb -> asb"(AL[i,j],conj(AL[i,j]),MAC)
         err += norm(MAC)
@@ -626,7 +635,8 @@ end
 
 function BgFLint(AL, M)
     Ni,Nj = size(AL)
-    BgFL = Array{Array{Float64,4},2}(undef, Ni, Nj)
+    arraytype = _arraytype(AL[1,1])
+    BgFL = Array{arraytype{Float64,4},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         irr = i + 2 - Ni * (i + 2 > Ni)
@@ -634,7 +644,7 @@ function BgFLint(AL, M)
         D2 = size(AL[irr,j],1)
         dL1 = size(M[i,j],1)
         dL2 = size(M[ir,j],1)
-        BgFL[i,j] = rand(Float64, D1, dL1, dL2, D2)
+        BgFL[i,j] = arraytype(rand(Float64, D1, dL1, dL2, D2))
     end
     return BgFL
 end
@@ -706,7 +716,8 @@ end
 
 function BgFRint(AR, M)
     Ni,Nj = size(AR)
-    BgFR = Array{Array{Float64,4},2}(undef, Ni, Nj)
+    arraytype = _arraytype(AR[1,1])
+    BgFR = Array{arraytype{Float64,4},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         irr = i + 2 - Ni * (i + 2 > Ni)
@@ -714,7 +725,7 @@ function BgFRint(AR, M)
         D2 = size(AR[irr,j],3)
         dR1 = size(M[i,j],3)
         dR2 = size(M[ir,j],3)
-        BgFR[i,j] = rand(Float64, D1, dR1, dR2, D2)
+        BgFR[i,j] = arraytype(rand(Float64, D1, dR1, dR2, D2))
     end
     return BgFR
 end
