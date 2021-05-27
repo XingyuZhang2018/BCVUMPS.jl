@@ -88,7 +88,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     Ni, Nj = size(M)
     atype = _arraytype(M[1,1])
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
-    Array{atype}(env.AL), Array{atype}(env.C), Array{atype}(env.AR), Array{atype}(env.FL), Array{atype}(env.FR)
+    Array{atype,2}(env.AL), Array{atype,2}(env.C), Array{atype,2}(env.AR), Array{atype,2}(env.FL), Array{atype,2}(env.FR)
 end
 
 function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, verbose=false)
