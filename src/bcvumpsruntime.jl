@@ -88,8 +88,8 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     Ni, Nj = size(M)
     atype = _arraytype(M[1,1])
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
-    for j = 1:Nj,i = 1:Ni
-        AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
+    AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
+    for j = 1:Nj,i = 1:Ni   
         AL[i,j], C[i,j], AR[i,j], FL[i,j], FR[i,j] = atype(AL[i,j]), atype(C[i,j]), atype(AR[i,j]), atype(FL[i,j]), atype(FR[i,j])
     end
     AL, C, AR, FL, FR
