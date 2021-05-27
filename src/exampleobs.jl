@@ -32,9 +32,9 @@ function Z(env::SquareBCVUMPSRuntime)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         jr = j + 1 - Nj * (j==Nj)
-        z = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j])))[]
-        λ = Array(ein"αcβ,βη,ηcγ,αγ ->"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j])))[]
-        z_tol *= z/λ
+        z = ein"αcβ,βsη,cpds,ηdγ,bpγ -> αb"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))
+        λ = ein"αcβ,βη,ηcγ,bγ -> αb"(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))
+        z_tol *= safetr(z)/safetr(λ)
     end
     return z_tol^(1/Ni/Nj)
 end
@@ -53,9 +53,9 @@ function magnetisation(env::SquareBCVUMPSRuntime, model::MT, β) where {MT <: Ha
     mag_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        mag = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Mag[i,j],FR[i,j],conj(AC[ir,j])))[]
-        λ = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j])))[]
-        mag_tol += mag/λ
+        mag = ein"αcβ,βsη,cpds,ηdγ,bpγ -> αb"(FL[i,j],AC[i,j],Mag[i,j],FR[i,j],conj(AC[ir,j]))
+        λ = ein"αcβ,βsη,cpds,ηdγ,bpγ -> αb"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))
+        mag_tol += safetr(mag)/safetr(λ)
     end
     return abs(mag_tol)/Ni/Nj
 end
@@ -76,9 +76,9 @@ function energy(env::SquareBCVUMPSRuntime, model::MT, β::Real) where {MT <: Ham
     ene_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        ene = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],Ene[i,j],FR[i,j],conj(AC[ir,j])))[]
-        λ = Array(ein"αcβ,βsη,cpds,ηdγ,αpγ ->"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j])))[]
-        ene_tol += ene/λ
+        ene = ein"αcβ,βsη,cpds,ηdγ,bpγ -> αb"(FL[i,j],AC[i,j],Ene[i,j],FR[i,j],conj(AC[ir,j]))
+        λ = ein"αcβ,βsη,cpds,ηdγ,bpγ -> αb"(FL[i,j],AC[i,j],M[i,j],FR[i,j],conj(AC[ir,j]))
+        ene_tol += safetr(ene)/safetr(λ)
     end
     return ene_tol/Ni/Nj
 end
