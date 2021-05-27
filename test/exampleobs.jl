@@ -1,6 +1,7 @@
 using Test
 using BCVUMPS
 using BCVUMPS:bcvumps_env,magnetisation,magofβ,energy,eneofβ,Z,Zofβ
+using CUDA
 using Random
 
 @testset "$(Ni)x$(Nj) ising with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
