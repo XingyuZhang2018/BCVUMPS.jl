@@ -68,8 +68,7 @@ true
 ```
 "
 function SquareBCVUMPSRuntime(M::AbstractArray{<:AbstractArray,2}, env, D::Int; verbose=false)
-    AL, C, AR, FL, FR = _initializect_square(M, env, D; verbose=verbose)
-    return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR)
+    return SquareBCVUMPSRuntime(M, _initializect_square(M, env, D; verbose=verbose)...)
 end
 
 function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
@@ -89,11 +88,12 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     Ni, Nj = size(M)
     atype = _arraytype(M[1,1])
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
-    AL = reshape([atype{Float64,3}(env.AL[i]) for i = 1:Ni*Nj], (Ni, Nj))
-    C = reshape([atype{Float64,2}(env.C[i]) for i = 1:Ni*Nj], (Ni, Nj))
-    AR = reshape([atype{Float64,3}(env.AR[i]) for i = 1:Ni*Nj], (Ni, Nj))
-    FL = reshape([atype{Float64,3}(env.FL[i]) for i = 1:Ni*Nj], (Ni, Nj))
-    FR = reshape([atype{Float64,3}(env.FR[i]) for i = 1:Ni*Nj], (Ni, Nj))
+    AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
+    AL = reshape([atype{Float64,3}(AL[i]) for i = 1:Ni*Nj], (Ni, Nj))
+    C = reshape([atype{Float64,2}(C[i]) for i = 1:Ni*Nj], (Ni, Nj))
+    AR = reshape([atype{Float64,3}(AR[i]) for i = 1:Ni*Nj], (Ni, Nj))
+    FL = reshape([atype{Float64,3}(FL[i]) for i = 1:Ni*Nj], (Ni, Nj))
+    FR = reshape([atype{Float64,3}(FR[i]) for i = 1:Ni*Nj], (Ni, Nj))
     AL, C, AR, FL, FR
 end
 
