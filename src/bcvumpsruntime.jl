@@ -91,6 +91,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
     AL = reshape([atype{Float64,3}(AL[i]) for i = 1:Ni*Nj], (Ni, Nj))
     C = reshape([atype{Float64,2}(C[i]) for i = 1:Ni*Nj], (Ni, Nj))
+    @show [typeof(AR[i]) for i = 1:Ni*Nj]
     AR = reshape([atype{Float64,3}(AR[i]) for i = 1:Ni*Nj], (Ni, Nj))
     FL = reshape([atype{Float64,3}(FL[i]) for i = 1:Ni*Nj], (Ni, Nj))
     FR = reshape([atype{Float64,3}(FR[i]) for i = 1:Ni*Nj], (Ni, Nj))
