@@ -1,5 +1,6 @@
 using LinearAlgebra
 using KrylovKit
+using Zygote
 
 export AbstractLattice, SquareLattice
 abstract type AbstractLattice end
