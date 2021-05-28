@@ -68,7 +68,8 @@ true
 ```
 "
 function SquareBCVUMPSRuntime(M::AbstractArray{<:AbstractArray,2}, env, D::Int; verbose=false)
-    return SquareBCVUMPSRuntime(M, _initializect_square(M, env, D; verbose=verbose)...)
+    AL, C, AR, FL, FR = _initializect_square(M, env, D; verbose=verbose)
+    return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR)
 end
 
 function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:random}, D::Int; verbose=false)
