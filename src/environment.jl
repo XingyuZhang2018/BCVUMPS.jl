@@ -55,7 +55,7 @@ function ρmap(ρ,Ai,J)
     Nj = size(Ai,1)
     for j = 1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
-        ρ = ein"dc,csb,dsa -> ab"(ρ,Ai[jr],conj(Ai[jr]))
+        ρ = ein"(dc,csb),dsa -> ab"(ρ,Ai[jr],conj(Ai[jr]))
     end
     return ρ
 end
@@ -122,7 +122,7 @@ function getLsped(Le, A, AL; kwargs...)
     Ni,Nj = size(A)
     L = Array{_arraytype(A[1,1]){Float64,2},2}(undef, Ni, Nj)
     for j = 1:Nj,i = 1:Ni
-        _, Ls, _ = eigsolve(X -> ein"dc,csb,dsa -> ab"(X,A[i,j],conj(AL[i,j])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
+        _, Ls, _ = eigsolve(X -> ein"(dc,csb),dsa -> ab"(X,A[i,j],conj(AL[i,j])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
         _, L[i,j] = qrpos!(real(Ls[1]))
     end
     return L
@@ -232,7 +232,7 @@ function FRmap(ARi, ARip, Mi, FR, J)
     FRm = copy(FR)
     for j=1:Nj
         jr = J-(j-1) + (J-(j-1) < 1)*Nj
-        FRm = ein"abc,eda,hfbd,gfc -> ehg"(FRm,ARi[jr],Mi[jr],conj(ARip[jr]))
+        FRm = ein"((abc,eda),hfbd),gfc -> ehg"(FRm,ARi[jr],Mi[jr],conj(ARip[jr]))
     end
     return FRm
 end
@@ -355,7 +355,7 @@ function ACmap(ACij, FLj, FRj, Mj, II)
     ACm = copy(ACij)
     for i=1:Ni
         ir = II+i-1 - (II+i-1 > Ni)*Ni
-        ACm = ein"abc,cde,bhfd,efg -> ahg"(FLj[ir],ACm,Mj[ir],FRj[ir])
+        ACm = ein"((abc,cde),bhfd),efg -> ahg"(FLj[ir],ACm,Mj[ir],FRj[ir])
     end
     return ACm
 end
@@ -380,7 +380,7 @@ function Cmap(Cij, FLjp, FRj, II)
     Cm = copy(Cij)
     for i=1:Ni
         ir = II+i-1 - (II+i-1 > Ni)*Ni
-        Cm = ein"abc,cd,dbe -> ae"(FLjp[ir],Cm,FRj[ir])
+        Cm = ein"(abc,cd),dbe -> ae"(FLjp[ir],Cm,FRj[ir])
     end
     return Cm
 end
@@ -550,7 +550,7 @@ function error(AL,C,FL,M,FR)
     err = 0
     for j = 1:Nj,i = 1:Ni
         MAC = ACmap(AC[i,j], FL[:,j], FR[:,j], M[:,j], i)
-        MAC -= ein"asd,cpd,cpb -> asb"(AL[i,j],conj(AL[i,j]),MAC)
+        MAC -= ein"asd,(cpd,cpb) -> asb"(AL[i,j],conj(AL[i,j]),MAC)
         err += norm(MAC)
     end
     return err
@@ -669,7 +669,7 @@ function BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
     BgFLm = copy(BgFLij)
     for j=1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
-        BgFLm = ein"dcba,def,ckge,bjhk,aji -> fghi"(BgFLm,ALi[jr],Mi[jr],Mip[jr],conj(ALip[jr]))
+        BgFLm = ein"(((dcba,def),ckge),bjhk),aji -> fghi"(BgFLm,ALi[jr],Mi[jr],Mip[jr],conj(ALip[jr]))
     end
     return BgFLm
 end
@@ -749,7 +749,7 @@ function BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
     BgFRm = copy(BgFR)
     for j=1:Nj
         jr = J-(j-1) + (J-(j-1) < 1)*Nj
-        BgFRm = ein"fghi,def,ckge,bjhk,aji -> dcba"(BgFRm,ARi[jr],Mi[jr],Mip[jr],conj(ARip[jr]))
+        BgFRm = ein"(((fghi,def),ckge),bjhk),aji -> dcba"(BgFRm,ARi[jr],Mi[jr],Mip[jr],conj(ARip[jr]))
     end
     return BgFRm
 end
