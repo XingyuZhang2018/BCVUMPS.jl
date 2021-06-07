@@ -1,9 +1,9 @@
-using Test
 using BCVUMPS
 using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap
 using LinearAlgebra
 using OMEinsum
 using Random
+using Test
 
 @testset "qr" begin
     A = rand(ComplexF64,4,4)
@@ -48,7 +48,7 @@ end
     end
 end
 
-@testset "leftenv and rightenv" for Ni = [2,3], Nj = [2,3]
+@testset "leftenv and rightenv" for Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
     A = Array{Array,2}(undef, Ni, Nj)

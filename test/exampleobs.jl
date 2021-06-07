@@ -1,7 +1,7 @@
-using Test
 using BCVUMPS
 using BCVUMPS:bcvumps_env,magnetisation,magofβ,energy,eneofβ,Z,Zofβ
 using Random
+using Test
 
 @testset "$(Ni)x$(Nj) ising" for Ni = [1,2,3], Nj = [1,2,3]
     Random.seed!(100)
