@@ -210,7 +210,7 @@ function FLmap(ALi, ALip, Mi, FL, J)
     FLm = copy(FL)
     for j=1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
-        FLm = ein"abc,cde,bfhd,afg -> ghe"(FLm,ALi[jr],Mi[jr],conj(ALip[jr]))
+        FLm = ein"((abc,cde),bfhd),afg -> ghe"(FLm,ALi[jr],Mi[jr],conj(ALip[jr]))
     end
     return FLm
 end
