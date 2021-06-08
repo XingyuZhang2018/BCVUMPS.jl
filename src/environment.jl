@@ -594,7 +594,7 @@ function obs_FL!(ALu, ALd, M, FL; kwargs...)
 end
 
 """
-    λR, FR = rightenv(AR, M, FR = FRint(AR,M); kwargs...)
+    λR, FR = obs_FR(ARu, ARd, M, FR = FRint(ARu,M); kwargs...)
 
 Compute the observable right environment tensor for MPS A and MPO M, by finding the left fixed point
 of AR - M - conj(AR) contracted along the physical dimension.

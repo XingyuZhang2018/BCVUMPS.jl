@@ -136,7 +136,7 @@ end
 
 If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
 """
-function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real, maxiter::Int, verbose = false) where {MT <: HamiltonianModel}
+function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real, maxiter::Int, verbose = false, savefile = false) where {MT <: HamiltonianModel}
     mkpath("./data/$(model)_$(atype)")
     chkp_file_up = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     if isfile(chkp_file_up)                               
@@ -147,7 +147,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     envup = bcvumps(rt; tol=tol, maxiter=maxiter, verbose = verbose)
     ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
 
-    Zygote.@ignore begin
+    Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envup.AL), Array{Array{Float64,2},2}(envup.C), Array{Array{Float64,3},2}(envup.AR), Array{Array{Float64,3},2}(envup.FL), Array{Array{Float64,3},2}(envup.FR)
         envupsave = SquareBCVUMPSRuntime(Mu, ALs, Cs, ARs, FLs, FRs)
         save(chkp_file_up, "env", envupsave)
@@ -164,7 +164,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
         rt = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
     end
     envdown = bcvumps(rt; tol=tol, maxiter=maxiter, verbose = verbose)
-    Zygote.@ignore begin
+    Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
         envdownsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
         save(chkp_file_down, "env", envdownsave)
