@@ -1,5 +1,5 @@
 using BCVUMPS
-using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap
+using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap, obs_FL, obs_FR
 using CUDA
 using LinearAlgebra
 using Random
@@ -69,6 +69,28 @@ end
 
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
+        @test λL[i,j] * FL[i,j] ≈ FLmap(AL[i,:], AL[ir,:], M[i,:], FL[i,j], j)
+        @test λR[i,j] * FR[i,j] ≈ FRmap(AR[i,:], AR[ir,:], M[i,:], FR[i,j], j)
+    end
+end
+
+@testset "observable leftenv and rightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
+    Random.seed!(100)
+    D, d = 5, 2
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    M = Array{atype{dtype,4},2}(undef, Ni, Nj)
+    for j = 1:Nj, i = 1:Ni
+        A[i,j] = atype(rand(dtype, D, d, D))
+        M[i,j] = atype(rand(dtype, d, d, d, d))
+    end
+
+    AL, = leftorth(A)
+    λL,FL = obs_FL(AL, AL, M)
+    _, AR, = rightorth(A)
+    λR,FR = obs_FR(AR, AR, M)
+
+    for j = 1:Nj, i = 1:Ni
+        ir = Ni + 1 - i
         @test λL[i,j] * FL[i,j] ≈ FLmap(AL[i,:], AL[ir,:], M[i,:], FL[i,j], j)
         @test λR[i,j] * FR[i,j] ≈ FRmap(AR[i,:], AR[ir,:], M[i,:], FR[i,j], j)
     end

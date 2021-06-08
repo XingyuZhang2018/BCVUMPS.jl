@@ -7,8 +7,8 @@ vumps. Save `env` in file `./data/model_β_D.jld2`. Requires that `model_tensor`
 """
 function bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false, atype = Array) where {MT <: HamiltonianModel}
     M = model_tensor(model, β; atype = atype)
-    mkpath("./data/")
-    chkp_file = "./data/$(model)_β$(β)_D$(D).jld2"
+    mkpath("./data/$(model)_$(atype)")
+    chkp_file = "./data/$(model)_$(atype)/$(model)_$(atype)_β$(β)_D$(D).jld2"
     if isfile(chkp_file)                               
         rt = SquareBCVUMPSRuntime(M, chkp_file, D; verbose = verbose)   
     else
@@ -78,6 +78,71 @@ function energy(env::SquareBCVUMPSRuntime, model::MT, β::Real) where {MT <: Ham
         ir = i + 1 - Ni * (i==Ni)
         ene = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],Ene[i,j],conj(AC[ir,j]),FR[i,j])
         λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
+        ene_tol += Array(ene)[]/Array(λ)[]
+    end
+    return ene_tol/Ni/Nj
+end
+
+"""
+    Z(env)
+
+return the partition function of the observable `env`.
+"""
+function Z(env)
+    M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    Ni,Nj = size(M)
+    ACu = ALCtoAC(ALu, Cu)
+    ACd = ALCtoAC(ALd, Cd)
+    z_tol = 1
+    for j = 1:Nj,i = 1:Ni
+        ir = Ni + 1 - i
+        jr = j + 1 - Nj * (j==Nj)
+        z = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
+        λ = ein"((αcβ,βη),ηcγ),αγ -> "(FL[i,jr],Cu[i,j],FR[i,j],Cd[ir,j])
+        z_tol *= Array(z)[]/Array(λ)[]
+    end
+    return abs(z_tol)^(1/Ni/Nj)
+end
+
+"""
+    magnetisation(env::SquareBCVUMPSRuntime, model::MT, β)
+
+return the magnetisation of the `model`. Requires that `mag_tensor` are defined for `model`.
+"""
+function magnetisation(env, model::MT, β) where {MT <: HamiltonianModel}
+    M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    Ni,Nj = size(M)
+    ACu = ALCtoAC(ALu, Cu)
+    ACd = ALCtoAC(ALd, Cd)
+    Mag = mag_tensor(model, β; atype = _arraytype(M[1,1]))
+    mag_tol = 0
+    for j = 1:Nj,i = 1:Ni
+        ir = Ni + 1 - i
+        mag = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],Mag[i,j],ACd[ir,j],FR[i,j])
+        λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
+        mag_tol += Array(mag)[]/Array(λ)[]
+    end
+    return abs(mag_tol)/Ni/Nj
+end
+
+"""
+    energy(env::SquareBCVUMPSRuntime, model::MT, β)
+
+return the energy of the `model` as a function of the inverse
+temperature `β` and the environment bonddimension `D` as calculated with
+vumps. Requires that `model_tensor` are defined for `model`.
+"""
+function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
+    M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    Ni,Nj = size(M)
+    ACu = ALCtoAC(ALu, Cu)
+    ACd = ALCtoAC(ALd, Cd)
+    Ene = energy_tensor(model, β; atype = _arraytype(M[1,1]))
+    ene_tol = 0
+    for j = 1:Nj,i = 1:Ni
+        ir = Ni + 1 - i
+        ene = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],Ene[i,j],ACd[ir,j],FR[i,j])
+        λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
         ene_tol += Array(ene)[]/Array(λ)[]
     end
     return ene_tol/Ni/Nj

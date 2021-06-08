@@ -557,11 +557,78 @@ function error(AL,C,FL,M,FR)
 end
 
 """
-    obs_env()
+    λL, FL = obs_FL(ALu, ALd, M, FL = FLint(AL,M); kwargs...)
 
-If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
+Compute the observable left environment tensor for MPS A and MPO M, by finding the left fixed point
+of AL - M - conj(AL) contracted along the physical dimension.
+```
+ ┌──  ALuᵢⱼ  ── ALuᵢⱼ₊₁   ──   ...         ┌── 
+ │     │        │                          │   
+FLᵢⱼ ─ Mᵢⱼ   ── Mᵢⱼ₊₁     ──   ...  = λLᵢⱼ FLᵢⱼ 
+ │     │        │                          │   
+ ┕──  ALdᵢᵣⱼ  ─ ALdᵢᵣⱼ₊₁  ──   ...         ┕── 
+```
 """
-function obs_env() end
+obs_FL(ALu, ALd, M, FL = FLint(ALu,M); kwargs...) = obs_FL!(ALu, ALd, M, copy(FL); kwargs...) 
+function obs_FL!(ALu, ALd, M, FL; kwargs...) 
+    Ni,Nj = size(ALu)
+    λL = zeros(Ni,Nj)
+    for j = 1:Nj,i = 1:Ni
+        ir = Nj + 1 - i
+        λLs, FL1s, _= eigsolve(X->FLmap(ALu[i,:], ALd[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
+            @show λLs
+            if real(λLs[1]) > 0
+                FL[i,j] = real(FL1s[1])
+                λL[i,j] = real(λLs[1])
+            else
+                FL[i,j] = real(FL1s[2])
+                λL[i,j] = real(λLs[2])
+            end
+        else
+            FL[i,j] = real(FL1s[1])
+            λL[i,j] = real(λLs[1])
+        end
+    end
+    return λL, FL
+end
+
+"""
+    λR, FR = rightenv(AR, M, FR = FRint(AR,M); kwargs...)
+
+Compute the observable right environment tensor for MPS A and MPO M, by finding the left fixed point
+of AR - M - conj(AR) contracted along the physical dimension.
+```
+   ... ─── ARuᵢⱼ₋₁ ── ARuᵢⱼ  ──┐          ──┐   
+            │          │       │            │  
+   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ   ──FRᵢⱼ  = λRᵢⱼ──FRᵢⱼ
+            │          │       │            │  
+   ... ─   ARdᵢᵣⱼ₋₁ ─ ARdᵢᵣⱼ ──┘          ──┘  
+```
+"""
+obs_FR(ARu, ARd, M, FR = FRint(ARu,M); kwargs...) = obs_FR!(ARu, ARd, M, copy(FR); kwargs...) 
+function obs_FR!(ARu, ARd, M, FR; kwargs...) 
+    Ni,Nj = size(ARu)
+    λR = zeros(Ni,Nj)
+    for j = 1:Nj,i = 1:Ni
+        ir = Nj + 1 - i
+        λRs, FR1s, _= eigsolve(X->FRmap(ARu[i,:], ARd[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
+            @show λRs
+            if real(λRs[1]) > 0
+                FR[i,j] = real(FR1s[1])
+                λR[i,j] = real(λRs[1])
+            else
+                FR[i,j] = real(FR1s[2])
+                λR[i,j] = real(λRs[2])
+            end
+        else
+            FR[i,j] = real(FR1s[1])
+            λR[i,j] = real(λRs[1])
+        end
+    end
+    return λR, FR
+end
 
 """
     λL, FL = obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...)
