@@ -140,11 +140,11 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     mkpath("./data/$(model)_$(atype)")
     chkp_file_up = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     if isfile(chkp_file_up)                               
-        rt = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
+        rtup = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
     else
-        rt = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
+        rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
     end
-    envup = bcvumps(rt; tol=tol, maxiter=maxiter, verbose = verbose)
+    envup = bcvumps(rtup; tol=tol, maxiter=maxiter, verbose = verbose)
     ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
 
     Zygote.@ignore savefile && begin
@@ -159,11 +159,11 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
 
     chkp_file_down = "./data/$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
     if isfile(chkp_file_down)                               
-        rt = SquareBCVUMPSRuntime(Md, chkp_file_down, χ; verbose = verbose)   
+        rtdown = SquareBCVUMPSRuntime(Md, chkp_file_down, χ; verbose = verbose)   
     else
-        rt = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
+        rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
     end
-    envdown = bcvumps(rt; tol=tol, maxiter=maxiter, verbose = verbose)
+    envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, verbose = verbose)
     Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
         envdownsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
