@@ -101,7 +101,7 @@ function Z(env)
         λ = ein"((αcβ,βη),ηcγ),αγ -> "(FL[i,jr],Cu[i,j],FR[i,j],Cd[ir,j])
         z_tol *= Array(z)[]/Array(λ)[]
     end
-    return abs(z_tol)^(1/Ni/Nj)
+    return z_tol^(1/Ni/Nj)
 end
 
 """

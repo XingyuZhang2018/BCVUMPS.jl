@@ -574,7 +574,7 @@ function obs_FL!(ALu, ALd, M, FL; kwargs...)
     Ni,Nj = size(ALu)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
-        ir = Nj + 1 - i
+        ir = Ni + 1 - i
         λLs, FL1s, _= eigsolve(X->FLmap(ALu[i,:], ALd[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
@@ -611,7 +611,7 @@ function obs_FR!(ARu, ARd, M, FR; kwargs...)
     Ni,Nj = size(ARu)
     λR = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
-        ir = Nj + 1 - i
+        ir = Ni + 1 - i
         λRs, FR1s, _= eigsolve(X->FRmap(ARu[i,:], ARd[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs

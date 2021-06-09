@@ -127,7 +127,7 @@ function uptodown(i,Ni,Nj)
     Cart = CartesianIndices((1:Ni,1:Nj))
     Index = Cart[i]
     i,j = Index[1],Index[2]
-    ir = Nj +1 - i
+    ir = Ni + 1 - i
     Liner[ir,j]
 end
 
@@ -154,7 +154,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     end
 
     Ni, Nj = size(ALu)
-    Md = [permutedims(Mu[uptodown(i,Ni,Nj)], [1,4,3,2]) for i = 1:Ni*Nj]
+    Md = [permutedims(Mu[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
     Md = reshape(Md, Ni, Nj)
 
     chkp_file_down = "./data/$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
