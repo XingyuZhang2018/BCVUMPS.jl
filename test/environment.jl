@@ -163,7 +163,7 @@ end
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         irr = i + 2 - Ni * (i + 2 > Ni)
-        @test λL[i,j] * BgFL[i,j] ≈ BgFLmap(AL[i,:], AL[ir,:], M[i,:], M[ir,:], BgFL[i,j], j)
-        @test λR[i,j] * BgFR[i,j] ≈ BgFRmap(AR[i,:], AR[ir,:], M[i,:], M[ir,:], BgFR[i,j], j)
+        @test λL[i,j] * BgFL[i,j] ≈ BgFLmap(AL[i,:], AL[i,:], M[i,:], M[ir,:], BgFL[i,j], j)
+        @test λR[i,j] * BgFR[i,j] ≈ BgFRmap(AR[i,:], AR[i,:], M[i,:], M[ir,:], BgFR[i,j], j)
     end
 end

@@ -698,8 +698,7 @@ end
 """
     BgFLm = BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
 
-ALip means ALᵢ₊₂
-Mip means Mᵢ₊₁
+designed specifically for 2x2 Kitaev cell
 ```
   ┌──        ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ...   
   │          │     │        │          
@@ -707,7 +706,7 @@ Mip means Mᵢ₊₁
 BgFLm   =  BgFLᵢⱼ  │        │       
   │          │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...  
   │          │     │        │       
-  ┕──        ┕──  ALᵢ₊₂ⱼ ─ ALᵢ₊₂ⱼ₊₁  ──   ... 
+  ┕──        ┕──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ... 
 ```
 """
 function BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
@@ -715,7 +714,7 @@ function BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
     BgFLm = copy(BgFLij)
     for j=1:Nj
         jr = J+j-1 - (J+j-1 > Nj)*Nj
-        BgFLm = ein"(((dcba,def),ckge),bjhk),aji -> fghi"(BgFLm,ALi[jr],Mi[jr],Mip[jr],conj(ALip[jr]))
+        BgFLm = ein"(((dcba,def),ckge),bjhk),aji -> fghi"(BgFLm,ALi[jr],Mi[jr],Mip[jr],permutedims(ALip[jr],(3,2,1)))
     end
     return BgFLm
 end
@@ -723,6 +722,7 @@ end
 """
     λL, BgFL = bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...)  
 
+This function is designed specifically for 2x2 Kitaev cell to get correct `BgFL` environment.
 Compute the left environment tensor for MPS A and MPO M, by finding the left fixed point
 of AL - M - M - conj(AL) contracted along the physical dimension.
 ```
@@ -732,7 +732,7 @@ of AL - M - M - conj(AL) contracted along the physical dimension.
  BgFLᵢⱼ  │        │                   = λLᵢⱼ BgFLᵢⱼ
    │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...           │   
    │     │        │                           │   
-   ┕──  ALᵢ₊₂ⱼ ─ ALᵢ₊₂ⱼ₊₁  ──   ...           ┕── 
+   ┕──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ...           ┕── 
 ```
 """
 bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...) = bigleftenv!(AL, M, copy(BgFL); kwargs...)
@@ -741,8 +741,7 @@ function bigleftenv!(AL, M, BgFL; kwargs...)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
-        λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[ir,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[i,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
             if real(λLs[1]) > 0
@@ -779,7 +778,7 @@ end
 """
     FRm = FRmap(ARi, ARip, Mi, FR, J)
 
-ARip means ARᵢ₊₁
+designed specifically for 2x2 Kitaev cell
 ```
  ──┐          ...  ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
    │                    │          │      │ 
@@ -787,7 +786,7 @@ ARip means ARᵢ₊₁
   BgFRm   =             │          │     BgFRm
  ──│          ... ──── Mᵢ₊₁ⱼ₋₁ ── Mᵢ₊₁ⱼ ──│
    │                    │          │      │     
- ──┘          ...  ─ ARᵢ₊₂ⱼ₋₁ ─── ARᵢ₊₂ⱼ──┘ 
+ ──┘          ...  ─   ARᵢⱼ₋₁ ─── ARᵢⱼ  ──┘ 
 ```
 """
 function BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
@@ -795,7 +794,7 @@ function BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
     BgFRm = copy(BgFR)
     for j=1:Nj
         jr = J-(j-1) + (J-(j-1) < 1)*Nj
-        BgFRm = ein"(((fghi,def),ckge),bjhk),aji -> dcba"(BgFRm,ARi[jr],Mi[jr],Mip[jr],conj(ARip[jr]))
+        BgFRm = ein"(((fghi,def),ckge),bjhk),aji -> dcba"(BgFRm,ARi[jr],Mi[jr],Mip[jr],permutedims(ARip[jr],(3,2,1)))
     end
     return BgFRm
 end
@@ -822,7 +821,7 @@ function bigrightenv!(AR, M, BgFR; kwargs...)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
-        λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[ir,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[i,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs
             if real(λRs[1]) > 0
