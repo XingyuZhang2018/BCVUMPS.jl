@@ -663,7 +663,7 @@ end
 BgFLm   =  BgFLᵢⱼ  │        │       
   │          │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...  
   │          │     │        │       
-  ┕──        ┕──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ... 
+  ┕──        ┕── ALᵢₚⱼ  ── ALᵢₚⱼ₊₁    ──   ... 
 ```
 """
 function BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
@@ -689,7 +689,7 @@ of AL - M - M - conj(AL) contracted along the physical dimension.
  BgFLᵢⱼ  │        │                   = λLᵢⱼ BgFLᵢⱼ
    │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...           │   
    │     │        │                           │   
-   ┕──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ...           ┕── 
+   ┕──  ALᵢₚⱼ ── ALᵢₚⱼ₊₁    ──   ...           ┕── 
 ```
 """
 bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...) = bigleftenv!(AL, M, copy(BgFL); kwargs...)
@@ -734,9 +734,8 @@ function BgFRint(AR, M)
 end
 
 """
-    FRm = FRmap(ARi, ARip, Mi, FR, J)
+    FRm = BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
 
-designed specifically for 2x2 Kitaev cell
 ```
  ──┐          ...  ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
    │                    │          │      │ 
@@ -744,7 +743,7 @@ designed specifically for 2x2 Kitaev cell
   BgFRm   =             │          │     BgFRm
  ──│          ... ──── Mᵢ₊₁ⱼ₋₁ ── Mᵢ₊₁ⱼ ──│
    │                    │          │      │     
- ──┘          ...  ─   ARᵢⱼ₋₁ ─── ARᵢⱼ  ──┘ 
+ ──┘          ...  ─   ARᵢₚⱼ₋₁ ─── ARᵢₚⱼ ──┘ 
 ```
 """
 function BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
@@ -770,7 +769,7 @@ of AR - M - M - conj(AR) contracted along the physical dimension.
 λRᵢⱼ BgFRᵢⱼ   =             │          │     BgFRᵢⱼ
      ──│          ... ──── Mᵢ₊₁ⱼ₋₁ ── Mᵢ₊₁ⱼ ──│
        │                    │          │      │     
-     ──┘          ...  ─   ARᵢⱼ₋₁ ─── ARᵢⱼ  ──┘ 
+     ──┘          ...  ─   ARᵢₚⱼ₋₁ ───ARᵢₚⱼ  ──┘ 
 ```
 """
 bigrightenv(AR, M, BgFR = BgFRint(AR,M); kwargs...) = bigrightenv!(AR, M, copy(BgFR); kwargs...)
