@@ -564,15 +564,59 @@ If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment ar
 function obs_env() end
 
 """
+    FLm = FLmapK(ALi, ALip, Mi, FL, J)
+
+designed specifically for 2x2 Kitaev cell
+```
+  ┌──        ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁   ──   ...   
+  │          │     │        │          
+ FLm   =   FLᵢⱼ ─ Mᵢⱼ   ── Mᵢⱼ₊₁    ──   ...  
+  │          │     │        │       
+  ┕──        ┕──  ALᵢᵣⱼ ─  ALᵢᵣⱼ₊₁  ──   ...
+```
+"""
+function FLmapK(ALi, ALip, Mi, FL, J)
+    Nj = size(ALi,1)
+    FLm = copy(FL)
+    for j=1:Nj
+        jr = J+j-1 - (J+j-1 > Nj)*Nj
+        FLm = ein"((abc,cde),bfhd),afg -> ghe"(FLm,ALi[jr],Mi[jr],permutedims(ALip[jr],(3,2,1)))
+    end
+    return FLm
+end
+
+"""
+    FRm = FRmapK(ARi, ARip, Mi, FR, J)
+
+designed specifically for 2x2 Kitaev cell
+```
+ ──┐       ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
+   │                │          │      │ 
+──FRm  =   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ
+   │                │          │      │  
+ ──┘       ... ─── ARᵢᵣⱼ₋₁  ─ ARᵢᵣⱼ ──┘ 
+```
+"""
+function FRmapK(ARi, ARip, Mi, FR, J)
+    Nj = size(ARi,1)
+    FRm = copy(FR)
+    for j=1:Nj
+        jr = J-(j-1) + (J-(j-1) < 1)*Nj
+        FRm = ein"((abc,eda),hfbd),gfc -> ehg"(FRm,ARi[jr],Mi[jr],permutedims(ARip[jr],(3,2,1)))
+    end
+    return FRm
+end
+
+"""
     λL, FL = obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...)
 
-This function is designed specifically for 2x2 longitudinally symmetric cell to get correct `FL` environment.
+This function is designed specifically for 2x2 Kitaev cell to get correct `FL` environment.
 ```
  ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁   ──   ...         ┌── 
  │     │        │                        │   
 FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...  = λLᵢⱼ FLᵢⱼ 
  │     │        │                        │   
- ┕──  ALᵢⱼ  ─  ALᵢⱼ₊₁   ──   ...         ┕── 
+ ┕──  ALᵢᵣⱼ  ─ ALᵢᵣⱼ₊₁   ──  ...         ┕── 
 ```
 """
 obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...) = obs2x2FL!(AL, M, copy(FL); kwargs...)
@@ -580,7 +624,8 @@ function obs2x2FL!(AL, M, FL; kwargs...)
     Ni,Nj = size(AL)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
-        λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], AL[i,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        ir = Ni + 1 - i
+        λLs, FL1s, _= eigsolve(X->FLmapK(AL[i,:], AL[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
             if real(λLs[1]) > 0
@@ -601,13 +646,13 @@ end
 """
     λR, FR = obs2x2FR(AR, M, FR = FRint(AR,M); kwargs...)
 
-This function is designed specifically for 2x2 longitudinally symmetric cell to get correct `FL` environment.
+This function is designed specifically for 2x2 Kitaev cell to get correct `FL` environment.
 ```
    ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐          ──┐   
             │          │      │            │  
    ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ  = λRᵢⱼ──FRᵢⱼ
             │          │      │            │  
-   ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┘          ──┘  
+   ... ─── ARᵢᵣⱼ₋₁ ── ARᵢᵣⱼ ──┘          ──┘  
 ```
 """
 obs2x2FR(AR, M, FR = FRint(AR,M); kwargs...) = obs2x2FR!(AR, M, copy(FR); kwargs...)
@@ -615,7 +660,8 @@ function obs2x2FR!(AR, M, FR; kwargs...)
     Ni,Nj = size(AR)
     λR = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
-        λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], AR[i,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        ir = Ni + 1 - i
+        λRs, FR1s, _= eigsolve(X->FRmapK(AR[i,:], AR[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs
             if real(λRs[1]) > 0

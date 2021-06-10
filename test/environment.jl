@@ -1,5 +1,5 @@
 using BCVUMPS
-using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap
+using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap,FLmapK,FRmapK
 using CUDA
 using LinearAlgebra
 using Random
@@ -139,9 +139,9 @@ end
     λR,FR = obs2x2FR(AR, M)
 
     for j = 1:Nj, i = 1:Ni
-        ir = i + 1 - Ni * (i==Ni)
-        @test λL[i,j] * FL[i,j] ≈ FLmap(AL[i,:], AL[i,:], M[i,:], FL[i,j], j)
-        @test λR[i,j] * FR[i,j] ≈ FRmap(AR[i,:], AR[i,:], M[i,:], FR[i,j], j)
+        ir = Ni + 1 - i
+        @test λL[i,j] * FL[i,j] ≈ FLmapK(AL[i,:], AL[ir,:], M[i,:], FL[i,j], j)
+        @test λR[i,j] * FR[i,j] ≈ FRmapK(AR[i,:], AR[ir,:], M[i,:], FR[i,j], j)
     end
 end
 
