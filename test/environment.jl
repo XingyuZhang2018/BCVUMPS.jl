@@ -134,12 +134,12 @@ end
     end
 
     AL, = leftorth(A)
-    λL,FL = obs2x2FL(AL, M)
     _, AR, = rightorth(A)
-    λR,FR = obs2x2FR(AR, M)
+    λL,FL = obs2x2FL(AL, AR, M)
+    λR,FR = obs2x2FR(AR, AL, M)
 
-    ALd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
-    ARd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ALd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ARd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
 
     for j = 1:Nj, i = 1:Ni
         ir = Ni + 1 - i
@@ -159,12 +159,12 @@ end
     end
 
     AL, = leftorth(A)
-    λL,BgFL = bigleftenv(AL, M)
     _, AR, = rightorth(A)
-    λR,BgFR = bigrightenv(AR, M)
+    λL,BgFL = bigleftenv(AL, AR, M)
+    λR,BgFR = bigrightenv(AR, AL, M)
 
-    ALd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
-    ARd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ALd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ARd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
 
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)

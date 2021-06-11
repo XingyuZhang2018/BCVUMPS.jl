@@ -572,14 +572,14 @@ This function is designed specifically for 2x2 Kitaev cell to get correct `FL` e
  │     │        │                        │   
 FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...  = λLᵢⱼ FLᵢⱼ 
  │     │        │                        │   
- ┕──  ALᵢᵣⱼ  ─ ALᵢᵣⱼ₊₁   ──  ...         ┕── 
+ ┕──  ARᵢᵣⱼ  ─ ALᵢᵣⱼ₊₁   ──  ...         ┕── 
 ```
 """
-obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...) = obs2x2FL!(AL, M, copy(FL); kwargs...)
-function obs2x2FL!(AL, M, FL; kwargs...)
+obs2x2FL(AL, AR, M, FL = FLint(AL,M); kwargs...) = obs2x2FL!(AL, AR, M, copy(FL); kwargs...)
+function obs2x2FL!(AL, AR, M, FL; kwargs...)
     Ni,Nj = size(AL)
     λL = zeros(Ni,Nj)
-    ALd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ALd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
     for j = 1:Nj,i = 1:Ni
         ir = Ni + 1 - i
         λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], ALd[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
@@ -609,14 +609,14 @@ This function is designed specifically for 2x2 Kitaev cell to get correct `FL` e
             │          │      │            │  
    ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ  = λRᵢⱼ──FRᵢⱼ
             │          │      │            │  
-   ... ─── ARᵢᵣⱼ₋₁ ── ARᵢᵣⱼ ──┘          ──┘  
+   ... ─── ALᵢᵣⱼ₋₁ ── ALᵢᵣⱼ ──┘          ──┘  
 ```
 """
-obs2x2FR(AR, M, FR = FRint(AR,M); kwargs...) = obs2x2FR!(AR, M, copy(FR); kwargs...)
-function obs2x2FR!(AR, M, FR; kwargs...)
+obs2x2FR(AR, AL, M, FR = FRint(AR,M); kwargs...) = obs2x2FR!(AR, AL, M, copy(FR); kwargs...)
+function obs2x2FR!(AR, AL, M, FR; kwargs...)
     Ni,Nj = size(AR)
     λR = zeros(Ni,Nj)
-    ARd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ARd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
     for j = 1:Nj,i = 1:Ni
         ir = Ni + 1 - i
         λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], ARd[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
@@ -692,11 +692,11 @@ of AL - M - M - conj(AL) contracted along the physical dimension.
    ┕──  ALᵢₚⱼ ── ALᵢₚⱼ₊₁    ──   ...           ┕── 
 ```
 """
-bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...) = bigleftenv!(AL, M, copy(BgFL); kwargs...)
-function bigleftenv!(AL, M, BgFL; kwargs...)
+bigleftenv(AL, AR, M, BgFL = BgFLint(AL,M); kwargs...) = bigleftenv!(AL, AR, M, copy(BgFL); kwargs...)
+function bigleftenv!(AL, AR, M, BgFL; kwargs...)
     Ni,Nj = size(AL)
     λL = zeros(Ni,Nj)
-    ALd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ALd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], ALd[i,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
@@ -772,11 +772,11 @@ of AR - M - M - conj(AR) contracted along the physical dimension.
      ──┘          ...  ─   ARᵢₚⱼ₋₁ ───ARᵢₚⱼ  ──┘ 
 ```
 """
-bigrightenv(AR, M, BgFR = BgFRint(AR,M); kwargs...) = bigrightenv!(AR, M, copy(BgFR); kwargs...)
-function bigrightenv!(AR, M, BgFR; kwargs...)
+bigrightenv(AR, AL, M, BgFR = BgFRint(AR,M); kwargs...) = bigrightenv!(AR, AL, M, copy(BgFR); kwargs...)
+function bigrightenv!(AR, AL, M, BgFR; kwargs...)
     Ni,Nj = size(AR)
     λR = zeros(Ni,Nj)
-    ARd = reshape([permutedims(AR[i], (3, 2, 1)) for i = 1:4], (2,2))
+    ARd = reshape([permutedims(AL[i], (3, 2, 1)) for i = 1:4], (2,2))
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
