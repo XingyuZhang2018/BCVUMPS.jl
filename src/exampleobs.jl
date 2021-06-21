@@ -157,6 +157,14 @@ return the analytical result for the magnetisation at inverse temperature
 magofβ(::Ising, β) = β > isingβc ? (1-sinh(2*β)^-4)^(1/8) : 0.
 
 """
+    magofdβ(::Ising,β)
+
+return the analytical result for the derivative of magnetisation at inverse temperature
+`β` for the 2d classical ising model.
+"""
+magofdβ(::Ising, β) = β > isingβc ? (coth(2*β)*csch(2*β)^4)/(1-csch(2*β)^4)^(7/8) : 0.
+
+"""
     eneofβ(::Ising,β)
 
 return some the numerical integrations of analytical result for the energy at inverse temperature
