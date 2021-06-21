@@ -112,8 +112,8 @@ return the magnetisation of the `model`. Requires that `mag_tensor` are defined 
 function magnetisation(env, model::MT, β) where {MT <: HamiltonianModel}
     M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
     Ni,Nj = size(M)
-    ACu = ALCtoAC(ALu, Cu)
-    ACd = ALCtoAC(ALd, Cd)
+    ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
     Mag = mag_tensor(model, β; atype = _arraytype(M[1,1]))
     mag_tol = 0
     for j = 1:Nj,i = 1:Ni
