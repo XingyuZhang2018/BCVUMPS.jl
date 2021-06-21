@@ -1,3 +1,4 @@
+using Base: array_subpadding
 using BCVUMPS
 using Test
 
