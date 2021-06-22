@@ -12,10 +12,14 @@ square lattice tensor-network.
 """
 function model_tensor(model::Ising, β::Real; atype = Array)
     Ni, Nj = model.Ni, model.Nj
-    ham = [-1. 1;1 -1]
-    w = exp.(- β .* ham)
-    wsq = sqrt(w)
-    m = atype(ein"ia,ib,ic,id -> abcd"(wsq, wsq, wsq, wsq))
+    # ham = [-1. 1;1 -1]
+    # w = exp.(- β .* ham)
+    # wsq = sqrt(w)
+    # m = atype(ein"ia,ib,ic,id -> abcd"(wsq, wsq, wsq, wsq))
+    a = reshape(Float64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 1] , 2,2,2,2)
+    cβ, sβ = sqrt(cosh(β)), sqrt(sinh(β))
+    q = 1/sqrt(2) * [cβ+sβ cβ-sβ; cβ-sβ cβ+sβ]
+    m = atype(ein"abcd,ai,bj,ck,dl -> ijkl"(a,q,q,q,q))
     reshape([m for i=1:Ni*Nj], Ni, Nj)
 end
 
