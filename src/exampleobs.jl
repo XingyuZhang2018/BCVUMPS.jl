@@ -91,8 +91,8 @@ return the partition function of the observable `env`.
 function Z(env)
     M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
     Ni,Nj = size(M)
-    ACu = ALCtoAC(ALu, Cu)
-    ACd = ALCtoAC(ALd, Cd)
+    ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
     z_tol = 1
     for j = 1:Nj,i = 1:Ni
         ir = Ni + 1 - i
@@ -135,8 +135,8 @@ vumps. Requires that `model_tensor` are defined for `model`.
 function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
     M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
     Ni,Nj = size(M)
-    ACu = ALCtoAC(ALu, Cu)
-    ACd = ALCtoAC(ALd, Cd)
+    ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
     Ene = energy_tensor(model, β; atype = _arraytype(M[1,1]))
     ene_tol = 0
     for j = 1:Nj,i = 1:Ni

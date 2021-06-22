@@ -1,6 +1,17 @@
+using Base.Threads
 using LinearAlgebra
 using KrylovKit
 using Random
+
+"""
+    i, j = ktoij(k,Ni,Nj)
+    LinearIndices -> CartesianIndices
+"""
+function ktoij(k,Ni,Nj)
+    Cart = CartesianIndices((1:Ni,1:Nj))
+    Index = Cart[k]
+    Index[1],Index[2]
+end
 
 #https://github.com/JuliaGPU/CuArrays.jl/issues/283
 safesign(x::Number) = iszero(x) ? one(x) : sign(x)
@@ -45,7 +56,8 @@ function cellones(A)
     Ni, Nj = size(A)
     D = size(A[1,1],1)
     Cell = Array{_arraytype(A[1,1]){Float64,2},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         Cell[i,j] = _mattype(A){Float64}(I, D, D)
     end
     return Cell
@@ -85,7 +97,8 @@ If ρ is not exactly positive definite, cholesky will fail
 """
 function getL!(A,L; kwargs...)
     Ni,Nj = size(A)
-    for j = 1:Nj, i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         _,ρs,_ = eigsolve(ρ->ρmap(ρ,A[i,:],j), L[i,j]'*L[i,j], 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
         ρ = real(ρs[1] + ρs[1]')
         ρ ./= tr(ρ)
@@ -108,7 +121,8 @@ function getAL(A,L)
     AL = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
     Le = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
     λ = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         D, d, = size(A[i,j])
         Q, R = qrpos!(reshape(L[i,j]*reshape(A[i,j], D, d*D), D*d, D))
         AL[i,j] = reshape(Q, D, d, D)
@@ -121,7 +135,8 @@ end
 function getLsped(Le, A, AL; kwargs...)
     Ni,Nj = size(A)
     L = Array{_arraytype(A[1,1]){Float64,2},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         _, Ls, _ = eigsolve(X -> ein"(dc,csb),dsa -> ab"(X,A[i,j],conj(AL[i,j])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
         _, L[i,j] = qrpos!(real(Ls[1]))
     end
@@ -161,14 +176,16 @@ function rightorth(A,L=cellones(A); tol = 1e-12, maxiter = 100, kwargs...)
     arraytype = _arraytype(A[1,1])
     Ar = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
     Lr = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         Ar[i,j] = permutedims(A[i,j],(3,2,1))
         Lr[i,j] = permutedims(L[i,j],(2,1))
     end
     AL, L, λ = leftorth(Ar,Lr; tol = tol, maxiter = maxiter, kwargs...)
     R = Array{arraytype{Float64,2},2}(undef, Ni, Nj)
     AR = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         R[i,j] = permutedims(L[i,j],(2,1))
         AR[i,j] = permutedims(AL[i,j],(3,2,1))
     end
@@ -241,7 +258,8 @@ function FLint(AL, M)
     Ni,Nj = size(AL)
     arraytype = _arraytype(AL[1,1])
     FL = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         D = size(AL[i,j],1)
         dL = size(M[i,j],1)
         FL[i,j] = arraytype(rand(Float64, D, dL, D))
@@ -253,7 +271,8 @@ function FRint(AR, M)
     Ni,Nj = size(AR)
     arraytype = _arraytype(AR[1,1])
     FR = Array{arraytype{Float64,3},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         D = size(AR[i,j],1)
         dR = size(M[i,j],3)
         FR[i,j] = arraytype(rand(Float64, D, dR, D))
@@ -278,7 +297,8 @@ leftenv(AL, M, FL = FLint(AL,M); kwargs...) = leftenv!(AL, M, copy(FL); kwargs..
 function leftenv!(AL, M, FL; kwargs...)
     Ni,Nj = size(AL)
     λL = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = i + 1 - Ni * (i==Ni)
         λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], AL[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
@@ -315,7 +335,8 @@ rightenv(AR, M, FR = FRint(AR,M); kwargs...) = rightenv!(AR, M, copy(FR); kwargs
 function rightenv!(AR, M, FR; kwargs...)
     Ni,Nj = size(AR)
     λR = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = i + 1 - Ni * (i==Ni)
         λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], AR[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
@@ -406,7 +427,8 @@ ACenv(AC, FL, M, FR; kwargs...) = ACenv!(copy(AC), FL, M, FR; kwargs...)
 function ACenv!(AC, FL, M, FR; kwargs...)
     Ni,Nj = size(AC)
     λAC = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         λACs, ACs, = eigsolve(X->ACmap(X, FL[:,j], FR[:,j], M[:,j], i), AC[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λACs) > 1 && norm(abs(λACs[1]) - abs(λACs[2])) < 1e-12
             @show λACs
@@ -446,7 +468,8 @@ Cenv(C, FL, FR; kwargs...) = Cenv!(copy(C), FL, FR; kwargs...)
 function Cenv!(C, FL, FR; kwargs...)
     Ni,Nj = size(C)
     λC = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         jr = j + 1 - (j==Nj) * Nj
         λCs, Cs, = eigsolve(X->Cmap(X, FL[:,jr], FR[:,j], i), C[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λCs) > 1 && norm(abs(λCs[1]) - abs(λCs[2])) < 1e-12
@@ -548,7 +571,8 @@ function error(AL,C,FL,M,FR)
     Ni,Nj = size(AL)
     AC = ALCtoAC(AL, C)
     err = 0
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         MAC = ACmap(AC[i,j], FL[:,j], FR[:,j], M[:,j], i)
         MAC -= ein"asd,(cpd,cpb) -> asb"(AL[i,j],conj(AL[i,j]),MAC)
         err += norm(MAC)
@@ -573,7 +597,8 @@ obs_FL(ALu, ALd, M, FL = FLint(ALu,M); kwargs...) = obs_FL!(ALu, ALd, M, copy(FL
 function obs_FL!(ALu, ALd, M, FL; kwargs...) 
     Ni,Nj = size(ALu)
     λL = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = Ni + 1 - i
         λLs, FL1s, _= eigsolve(X->FLmap(ALu[i,:], ALd[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
@@ -610,7 +635,8 @@ obs_FR(ARu, ARd, M, FR = FRint(ARu,M); kwargs...) = obs_FR!(ARu, ARd, M, copy(FR
 function obs_FR!(ARu, ARd, M, FR; kwargs...) 
     Ni,Nj = size(ARu)
     λR = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = Ni + 1 - i
         λRs, FR1s, _= eigsolve(X->FRmap(ARu[i,:], ARd[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
@@ -646,7 +672,8 @@ obs2x2FL(AL, M, FL = FLint(AL,M); kwargs...) = obs2x2FL!(AL, M, copy(FL); kwargs
 function obs2x2FL!(AL, M, FL; kwargs...)
     Ni,Nj = size(AL)
     λL = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], AL[i,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
@@ -681,7 +708,8 @@ obs2x2FR(AR, M, FR = FRint(AR,M); kwargs...) = obs2x2FR!(AR, M, copy(FR); kwargs
 function obs2x2FR!(AR, M, FR; kwargs...)
     Ni,Nj = size(AR)
     λR = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], AR[i,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs
@@ -704,7 +732,8 @@ function BgFLint(AL, M)
     Ni,Nj = size(AL)
     arraytype = _arraytype(AL[1,1])
     BgFL = Array{arraytype{Float64,4},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = i + 1 - Ni * (i==Ni)
         irr = i + 2 - Ni * (i + 2 > Ni)
         D1 = size(AL[i,j],1)
@@ -760,7 +789,8 @@ bigleftenv(ALu, ALd, M, BgFL = BgFLint(ALu,M); kwargs...) = bigleftenv!(ALu, ALd
 function bigleftenv!(ALu, ALd, M, BgFL; kwargs...)
     Ni,Nj = size(ALu)
     λL = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = i + 1 - Ni * (i==Ni)
         # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
         λLs, BgFL1s, _= eigsolve(X->BgFLmap(ALu[i,:], ALd[i,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
@@ -785,7 +815,8 @@ function BgFRint(AR, M)
     Ni,Nj = size(AR)
     arraytype = _arraytype(AR[1,1])
     BgFR = Array{arraytype{Float64,4},2}(undef, Ni, Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = i + 1 - Ni * (i==Ni)
         irr = i + 2 - Ni * (i + 2 > Ni)
         D1 = size(AR[i,j],3)
@@ -840,7 +871,8 @@ bigrightenv(ARu, ARd, M, BgFR = BgFRint(ARu,M); kwargs...) = bigrightenv!(ARu, A
 function bigrightenv!(ARu, ARd, M, BgFR; kwargs...)
     Ni,Nj = size(ARu)
     λR = zeros(Ni,Nj)
-    for j = 1:Nj,i = 1:Ni
+    @threads for k = 1:Ni*Nj
+        i,j = ktoij(k, Ni, Nj)
         ir = i + 1 - Ni * (i==Ni)
         # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
         λRs, BgFR1s, _= eigsolve(X->BgFRmap(ARu[i,:], ARd[i,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
