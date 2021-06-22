@@ -140,11 +140,11 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     mkpath("./data/$(model)_$(atype)")
     chkp_file = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     verbose && print("↑ ")
-    if isfile(chkp_file)                               
-        rtup = SquareBCVUMPSRuntime(Mu, chkp_file, χ; verbose = verbose)   
-    else
+    # if isfile(chkp_file)                               
+        # rtup = SquareBCVUMPSRuntime(Mu, chkp_file, χ; verbose = verbose)   
+    # else
         rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
-    end
+    # end
     envup = bcvumps(rtup; tol=tol, maxiter=maxiter, verbose = verbose)
     ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
 
@@ -159,17 +159,18 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     Md = reshape(Md, Ni, Nj)
 
     verbose && print("↓ ")
-    if isfile(chkp_file)                               
+    # if isfile(chkp_file)                               
         rtdown = SquareBCVUMPSRuntime(Md, chkp_file, χ; verbose = verbose)   
-    else
-        rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
-    end
+    # else
+        # rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
+    # end
     envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, verbose = verbose)
-    Zygote.@ignore savefile && begin
-        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
-        envsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file, "env", envsave)
-    end
+
+    # Zygote.@ignore savefile && begin
+    #     ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
+    #     envsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
+    #     save(chkp_file, "env", envsave)
+    # end
     ALd,ARd,Cd = envdown.AL,envdown.AR,envdown.C
 
     _, FL = obs_FL(ALu, ALd, Mu, FL)
