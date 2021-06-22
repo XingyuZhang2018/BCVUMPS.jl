@@ -167,7 +167,7 @@ end
     end
 end
 
-@testset "bigleftenv and bigrightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
+@testset "bigleftenv and bigrightenv with $atype{$dtype}" for atype in [Array], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
     A = Array{atype{dtype,3},2}(undef, Ni, Nj)
@@ -177,15 +177,17 @@ end
         M[i,j] = atype(rand(dtype, d, d, d, d))
     end
 
-    AL, = leftorth(A)
-    λL,BgFL = bigleftenv(AL, M)
-    _, AR, = rightorth(A)
-    λR,BgFR = bigrightenv(AR, M)
+    ALu, = leftorth(A)
+    ALd, = leftorth(A)
+    λL,BgFL = bigleftenv(ALu, ALd, M)
+    _, ARu, = rightorth(A)
+    _, ARd, = rightorth(A)
+    λR,BgFR = bigrightenv(ARu, ARd, M)
 
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         irr = i + 2 - Ni * (i + 2 > Ni)
-        @test λL[i,j] * BgFL[i,j] ≈ BgFLmap(AL[i,:], AL[ir,:], M[i,:], M[ir,:], BgFL[i,j], j)
-        @test λR[i,j] * BgFR[i,j] ≈ BgFRmap(AR[i,:], AR[ir,:], M[i,:], M[ir,:], BgFR[i,j], j)
+        @test λL[i,j] * BgFL[i,j] ≈ BgFLmap(ALu[i,:], ALd[i,:], M[i,:], M[ir,:], BgFL[i,j], j)
+        @test λR[i,j] * BgFR[i,j] ≈ BgFRmap(ARu[i,:], ARd[i,:], M[i,:], M[ir,:], BgFR[i,j], j)
     end
 end

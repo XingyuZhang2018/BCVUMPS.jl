@@ -742,28 +742,28 @@ function BgFLmap(ALi, ALip, Mi, Mip, BgFLij, J)
 end
 
 """
-    λL, BgFL = bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...)  
+    λL, BgFL = bigleftenv(ALu, ALd, M, BgFL = BgFLint(AL,M); kwargs...)
 
-Compute the left environment tensor for MPS A and MPO M, by finding the left fixed point
+Compute the up and down left environment tensor for MPS A and MPO M, by finding the left fixed point
 of AL - M - M - conj(AL) contracted along the physical dimension.
 ```
-   ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁    ──   ...           ┌── 
+   ┌──  ALuᵢⱼ ── ALuᵢⱼ₊₁   ──   ...           ┌── 
    │     │        │                           │   
    │  ─ Mᵢⱼ   ── Mᵢⱼ₊₁     ──   ...           │   
  BgFLᵢⱼ  │        │                   = λLᵢⱼ BgFLᵢⱼ
    │  ─ Mᵢ₊₁ⱼ ── Mᵢ₊₁ⱼ₊₁   ──   ...           │   
    │     │        │                           │   
-   ┕──  ALᵢ₊₂ⱼ ─ ALᵢ₊₂ⱼ₊₁  ──   ...           ┕── 
+   ┕──  ALdᵢⱼ ─  ALdᵢⱼ₊₁   ──   ...           ┕── 
 ```
 """
-bigleftenv(AL, M, BgFL = BgFLint(AL,M); kwargs...) = bigleftenv!(AL, M, copy(BgFL); kwargs...)
-function bigleftenv!(AL, M, BgFL; kwargs...)
-    Ni,Nj = size(AL)
+bigleftenv(ALu, ALd, M, BgFL = BgFLint(ALu,M); kwargs...) = bigleftenv!(ALu, ALd, M, copy(BgFL); kwargs...)
+function bigleftenv!(ALu, ALd, M, BgFL; kwargs...)
+    Ni,Nj = size(ALu)
     λL = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
-        λLs, BgFL1s, _= eigsolve(X->BgFLmap(AL[i,:], AL[ir,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        λLs, BgFL1s, _= eigsolve(X->BgFLmap(ALu[i,:], ALd[i,:], M[i,:], M[ir,:], X, j), BgFL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
             if real(λLs[1]) > 0
@@ -822,9 +822,9 @@ function BgFRmap(ARi, ARip, Mi, Mip, BgFR, J)
 end
 
 """
-    λR, BgFR = bigrightenv(AR, M, BgFR = BgFRint(AR,M); kwargs...)
+    λR, BgFR = bigrightenv(ARu, ARd, M, BgFR = BgFRint(ARu,M); kwargs...)
 
-Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
+Compute the up and down right environment tensor for MPS A and MPO M, by finding the left fixed point
 of AR - M - M - conj(AR) contracted along the physical dimension.
 ```
      ──┐          ...  ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐ 
@@ -836,14 +836,14 @@ of AR - M - M - conj(AR) contracted along the physical dimension.
      ──┘          ...  ─ ARᵢ₊₂ⱼ₋₁ ─── ARᵢ₊₂ⱼ──┘ 
 ```
 """
-bigrightenv(AR, M, BgFR = BgFRint(AR,M); kwargs...) = bigrightenv!(AR, M, copy(BgFR); kwargs...)
-function bigrightenv!(AR, M, BgFR; kwargs...)
-    Ni,Nj = size(AR)
+bigrightenv(ARu, ARd, M, BgFR = BgFRint(ARu,M); kwargs...) = bigrightenv!(ARu, ARd, M, copy(BgFR); kwargs...)
+function bigrightenv!(ARu, ARd, M, BgFR; kwargs...)
+    Ni,Nj = size(ARu)
     λR = zeros(Ni,Nj)
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         # irr = i + 2 - Ni * (i + 2 > Ni) # modified for 2x2
-        λRs, BgFR1s, _= eigsolve(X->BgFRmap(AR[i,:], AR[ir,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        λRs, BgFR1s, _= eigsolve(X->BgFRmap(ARu[i,:], ARd[i,:], M[i,:], M[ir,:], X, j), BgFR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs
             if real(λRs[1]) > 0
