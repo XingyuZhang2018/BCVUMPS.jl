@@ -140,11 +140,11 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     mkpath("./data/$(model)_$(atype)")
     chkp_file = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     verbose && print("↑ ")
-    # if isfile(chkp_file)                               
-        # rtup = SquareBCVUMPSRuntime(Mu, chkp_file, χ; verbose = verbose)   
-    # else
+    if isfile(chkp_file)                               
+        rtup = SquareBCVUMPSRuntime(Mu, chkp_file, χ; verbose = verbose)   
+    else
         rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
-    # end
+    end
     envup = bcvumps(rtup; tol=tol, maxiter=maxiter, verbose = verbose)
     ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
 
@@ -172,6 +172,10 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     #     save(chkp_file, "env", envsave)
     # end
     ALd,ARd,Cd = envdown.AL,envdown.AR,envdown.C
+
+    # λL_n, _ = norm_FL(ALu, ALd)
+    # λR_n, _ = norm_FR(ARu, ARd)
+    # @show λL_n,λR_n
 
     _, FL = obs_FL(ALu, ALd, Mu, FL)
     _, FR = obs_FR(ARu, ARd, Mu, FR)

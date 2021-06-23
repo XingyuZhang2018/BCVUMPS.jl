@@ -1,5 +1,5 @@
 using BCVUMPS
-using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap, obs_FL, obs_FR
+using BCVUMPS:qrpos,lqpos,leftorth,rightorth,leftenv,FLmap,rightenv,FRmap,ACenv,ACmap,Cenv,Cmap,LRtoC,ALCtoAC,ACCtoALAR,error,obs2x2FL,obs2x2FR,bigleftenv,BgFLmap,bigrightenv,BgFRmap, obs_FL, obs_FR, norm_FL, norm_FR, norm_FLmap, norm_FRmap
 using CUDA
 using LinearAlgebra
 using Random
@@ -189,5 +189,26 @@ end
         irr = i + 2 - Ni * (i + 2 > Ni)
         @test λL[i,j] * BgFL[i,j] ≈ BgFLmap(ALu[i,:], ALd[i,:], M[i,:], M[ir,:], BgFL[i,j], j)
         @test λR[i,j] * BgFR[i,j] ≈ BgFRmap(ARu[i,:], ARd[i,:], M[i,:], M[ir,:], BgFR[i,j], j)
+    end
+end
+
+@testset "norm leftenv and rightenv with $atype{$dtype}" for atype in [Array], dtype in [Float64], Ni = [2], Nj = [2]
+    Random.seed!(100)
+    D, d = 5, 2
+    A = Array{atype{dtype,3},2}(undef, Ni, Nj)
+    for j = 1:Nj, i = 1:Ni
+        A[i,j] = atype(rand(dtype, D, d, D))
+    end
+
+    ALu, = leftorth(A)
+    ALd, = leftorth(A)
+    λL, FL_norm = norm_FL(ALu, ALd)
+    _, ARu, = rightorth(A)
+    _, ARd, = rightorth(A)
+    λR, FR_norm = norm_FR(ARu, ARd)
+
+    for j = 1:Nj, i = 1:Ni
+        @test λL[i,j] * FL_norm[i,j] ≈ norm_FLmap(ALu[i,:], ALu[i,:], FL_norm[i,j], j)
+        @test λR[i,j] * FR_norm[i,j] ≈ norm_FRmap(ARu[i,:], ARd[i,:], FR_norm[i,j], j)
     end
 end
