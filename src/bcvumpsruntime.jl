@@ -138,39 +138,37 @@ If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment ar
 """
 function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real, maxiter::Int, verbose = false, savefile = false) where {MT <: HamiltonianModel}
     mkpath("./data/$(model)_$(atype)")
-    chkp_file = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
-    verbose && print("↑ ")
-    # if isfile(chkp_file)                               
-        # rtup = SquareBCVUMPSRuntime(Mu, chkp_file, χ; verbose = verbose)   
-    # else
+    chkp_file_up = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
+    if isfile(chkp_file_up)                               
+        rtup = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
+    else
         rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
-    # end
+    end
     envup = bcvumps(rtup; tol=tol, maxiter=maxiter, verbose = verbose)
     ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
 
     Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envup.AL), Array{Array{Float64,2},2}(envup.C), Array{Array{Float64,3},2}(envup.AR), Array{Array{Float64,3},2}(envup.FL), Array{Array{Float64,3},2}(envup.FR)
-        envsave = SquareBCVUMPSRuntime(Mu, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file, "env", envsave)
+        envupsave = SquareBCVUMPSRuntime(Mu, ALs, Cs, ARs, FLs, FRs)
+        save(chkp_file_up, "env", envupsave)
     end
 
     Ni, Nj = size(ALu)
     Md = [permutedims(Mu[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
     Md = reshape(Md, Ni, Nj)
 
-    verbose && print("↓ ")
-    # if isfile(chkp_file)                               
-        rtdown = SquareBCVUMPSRuntime(Md, chkp_file, χ; verbose = verbose)   
-    # else
-        # rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
-    # end
+    chkp_file_down = "./data/$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
+    if isfile(chkp_file_down)                               
+        rtdown = SquareBCVUMPSRuntime(Md, chkp_file_down, χ; verbose = verbose)   
+    else
+        rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
+    end
     envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, verbose = verbose)
-
-    # Zygote.@ignore savefile && begin
-    #     ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
-    #     envsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
-    #     save(chkp_file, "env", envsave)
-    # end
+    Zygote.@ignore savefile && begin
+        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
+        envdownsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
+        save(chkp_file_down, "env", envdownsave)
+    end
     ALd,ARd,Cd = envdown.AL,envdown.AR,envdown.C
 
     _, FL = obs_FL(ALu, ALd, Mu, FL)
