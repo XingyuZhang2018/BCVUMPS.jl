@@ -53,7 +53,7 @@ end
 end
 
 @testset "leftenv and rightenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
-    Random.seed!(50)
+    Random.seed!(100)
     D, d = 5, 2
     A = Array{atype{dtype,3},2}(undef, Ni, Nj)
     M = Array{atype{dtype,4},2}(undef, Ni, Nj)
@@ -63,12 +63,12 @@ end
     end
 
     AL, = leftorth(A)
-    λL,FL = leftenv(AL, M)
+    λL,FL = leftenv(AL, AL, M)
     _, AR, = rightorth(A)
-    λR,FR = rightenv(AR, M)
+    λR,FR = rightenv(AR, AR, M)
 
     for j = 1:Nj, i = 1:Ni
-        ir = i + 1 - Ni * (i==Ni)
+        ir = Ni + 1 - i
         @test λL[i,j] * FL[i,j] ≈ FLmap(AL[i,:], AL[ir,:], M[i,:], FL[i,j], j)
         @test λR[i,j] * FR[i,j] ≈ FRmap(AR[i,:], AR[ir,:], M[i,:], FR[i,j], j)
     end

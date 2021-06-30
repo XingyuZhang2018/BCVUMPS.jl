@@ -273,25 +273,25 @@ function FRint(AR, M)
 end
 
 """
-    λL, FL = leftenv(AL, M, FL = FLint(AL,M); kwargs...) 
+    λL, FL = leftenv(ALu, ALd, M, FL = FLint(ALu,M); kwargs...)
 
 Compute the left environment tensor for MPS A and MPO M, by finding the left fixed point
-of AL - M - conj(AL) contracted along the physical dimension.
+of ALu - M - ALd contracted along the physical dimension.
 ```
- ┌──  ALᵢⱼ  ── ALᵢⱼ₊₁   ──   ...         ┌── 
- │     │        │                        │   
-FLᵢⱼ ─ Mᵢⱼ  ── Mᵢⱼ₊₁    ──   ...  = λLᵢⱼ FLᵢⱼ 
- │     │        │                        │   
- ┕──  ALᵢ₊₁ⱼ ─ ALᵢ₊₁ⱼ₊₁ ──   ...         ┕── 
+ ┌──  ALuᵢⱼ  ── ALuᵢⱼ₊₁   ──   ...         ┌── 
+ │     │        │                          │   
+FLᵢⱼ ─ Mᵢⱼ   ── Mᵢⱼ₊₁     ──   ...  = λLᵢⱼ FLᵢⱼ 
+ │     │        │                          │   
+ ┕──  ALdᵢᵣⱼ  ─ ALdᵢᵣⱼ₊₁  ──   ...         ┕── 
 ```
 """
-leftenv(AL, M, FL = FLint(AL,M); kwargs...) = leftenv!(AL, M, copy(FL); kwargs...)
-function leftenv!(AL, M, FL; kwargs...)
-    Ni,Nj = size(AL)
+leftenv(ALu, ALd, M, FL = FLint(ALu,M); kwargs...) = leftenv!(ALu, ALd, M, copy(FL); kwargs...) 
+function leftenv!(ALu, ALd, M, FL; kwargs...) 
+    Ni,Nj = size(ALu)
     λL = zeros(Ni,Nj)
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        λLs, FL1s, _= eigsolve(X->FLmap(AL[i,:], AL[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
+        λLs, FL1s, _= eigsolve(X->FLmap(ALu[i,:], ALd[ir,:], M[i,:], X, j), FL[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λLs) > 1 && norm(abs(λLs[1]) - abs(λLs[2])) < 1e-12
             @show λLs
             if real(λLs[1]) > 0
@@ -310,25 +310,25 @@ function leftenv!(AL, M, FL; kwargs...)
 end
 
 """
-    λR, FR = rightenv(AR, M, FR = FRint(AR,M); kwargs...)
+    λR, FR = rightenv(ARu, ARd, M, FR = FRint(ARu,M); kwargs...)
 
 Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
 of AR - M - conj(AR) contracted along the physical dimension.
 ```
-   ... ─── ARᵢⱼ₋₁  ── ARᵢⱼ  ──┐          ──┐   
-            │          │      │            │  
-   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ  ──FRᵢⱼ  = λRᵢⱼ──FRᵢⱼ
-            │          │      │            │  
-   ... ─ ARᵢ₊₁ⱼ₋₁ ─ ARᵢ₊₁ⱼ  ──┘          ──┘  
+   ... ─── ARuᵢⱼ₋₁ ── ARuᵢⱼ  ──┐          ──┐   
+            │          │       │            │  
+   ... ──── Mᵢⱼ₋₁  ── Mᵢⱼ   ──FRᵢⱼ  = λRᵢⱼ──FRᵢⱼ
+            │          │       │            │  
+   ... ─   ARdᵢᵣⱼ₋₁ ─ ARdᵢᵣⱼ ──┘          ──┘  
 ```
 """
-rightenv(AR, M, FR = FRint(AR,M); kwargs...) = rightenv!(AR, M, copy(FR); kwargs...)
-function rightenv!(AR, M, FR; kwargs...)
-    Ni,Nj = size(AR)
+rightenv(ARu, ARd, M, FR = FRint(ARu,M); kwargs...) = rightenv!(ARu, ARd, M, copy(FR); kwargs...) 
+function rightenv!(ARu, ARd, M, FR; kwargs...) 
+    Ni,Nj = size(ARu)
     λR = zeros(Ni,Nj)
     for j = 1:Nj, i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        λRs, FR1s, _= eigsolve(X->FRmap(AR[i,:], AR[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
+        λRs, FR1s, _= eigsolve(X->FRmap(ARu[i,:], ARd[ir,:], M[i,:], X, j), FR[i,j], 1, :LM; ishermitian = false, kwargs...)
         if length(λRs) > 1 && norm(abs(λRs[1]) - abs(λRs[2])) < 1e-12
             @show λRs
             if real(λRs[1]) > 0
@@ -514,7 +514,7 @@ function ALCtoAC(AL,C)
 end
 
 """
-    ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
+    AL, AR = ACCtoALAR(AC, C)
 
 QR factorization to get `AL` and `AR` from `AC` and `C`
 
@@ -523,17 +523,13 @@ QR factorization to get `AL` and `AR` from `AC` and `C`
   │                  │                  │   
 ````
 """
-function ACCtoALAR(AL, C, AR, M, FL, FR; kwargs...)
-    Ni,Nj = size(AL)
-    AC = ALCtoAC(AL,C)
-    _, AC = ACenv(AC, FL, M, FR; kwargs...)
-    _, C = Cenv(C, FL, FR; kwargs...)
-
+function ACCtoALAR(AC, C)
+    Ni,Nj = size(AC)
     ALij = [ACCtoAL(AC[i],C[i]) for i=1:Ni*Nj]
     AL = reshape(ALij,Ni,Nj)
     ARij = [ACCtoAR(AC[i],C[itoir(i,Ni,Nj)]) for i=1:Ni*Nj]
     AR = reshape(ARij,Ni,Nj)
-    return AL, C, AR
+    return AL, AR
 end
 
 """

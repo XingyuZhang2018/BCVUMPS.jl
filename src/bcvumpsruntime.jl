@@ -76,8 +76,8 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     A = initialA(M, D)
     AL, L = leftorth(A)
     R, AR = rightorth(AL)
-    _, FL = leftenv(AL, M)
-    _, FR = rightenv(AR, M)
+    _, FL = leftenv(AL, AL, M)
+    _, FR = rightenv(AR, AR, M)
     C = LRtoC(L,R)
     Ni, Nj = size(M)
     verbose && print("random initial bcvumps $(Ni)×$(Nj) environment-> ")
@@ -108,10 +108,17 @@ end
 
 function bcvumpstep(rt::BCVUMPSRuntime, err)
     M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
-    AL, C, AR = ACCtoALAR(AL, C, AR, M, FL, FR)
-    _, FL = leftenv(AL, M, FL)
-    _, FR = rightenv(AR, M, FR)
+    AC = ALCtoAC(AL,C)
+    _, ACp = ACenv(AC, FL, M, FR)
+    _, Cp = Cenv(C, FL, FR)
+    ALp, ARp = ACCtoALAR(ACp, Cp)
+    _, FL = leftenv(AL, ALp, M, FL)
+    _, FR = rightenv(AR, ARp, M, FR)
+    _, AC = ACenv(ACp, FL, M, FR)
+    _, C = Cenv(Cp, FL, FR)
+    AL, AR = ACCtoALAR(AC, C)
     err = error(AL, C, FL, M, FR)
+    # @show err
     return SquareBCVUMPSRuntime(M, AL, C, AR, FL, FR), err
 end
 
@@ -159,11 +166,11 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     Md = reshape(Md, Ni, Nj)
 
     verbose && print("↓ ")
-    # if isfile(chkp_file)                               
+    if isfile(chkp_file)                               
         rtdown = SquareBCVUMPSRuntime(Md, chkp_file, χ; verbose = verbose)   
-    # else
-        # rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
-    # end
+    else
+        rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
+    end
     envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, verbose = verbose)
 
     # Zygote.@ignore savefile && begin
