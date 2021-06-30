@@ -6,12 +6,13 @@ struct Ising <: HamiltonianModel
 end
 Ising() = Ising(1,1)
 
-struct Ising22 <: HamiltonianModel
+mutable struct Ising22 <: HamiltonianModel
     Ni::Int
     Nj::Int 
     r::Real
+    n::Real
 end
-Ising22(r) = Ising22(2,2,r)
+Ising22(r) = Ising22(2,2,r,1)
 
 struct Ising33 <: HamiltonianModel 
     Ni::Int

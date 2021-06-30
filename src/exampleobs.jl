@@ -111,6 +111,8 @@ return the magnetisation of the `model`. Requires that `mag_tensor` are defined 
 """
 function magnetisation(env, model::MT, β) where {MT <: HamiltonianModel}
     M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    n = 1
+    fieldnames(typeof(model))[end] == :n && (n = model.n)
     Ni,Nj = size(M)
     ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
     ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
@@ -120,7 +122,7 @@ function magnetisation(env, model::MT, β) where {MT <: HamiltonianModel}
         ir = Ni + 1 - i
         mag = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],Mag[i,j],ACd[ir,j],FR[i,j])
         λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
-        mag_tol += Array(mag)[]/Array(λ)[]
+        mag_tol += Array(mag)[]/Array(λ)[]/n
     end
     return abs(mag_tol)/Ni/Nj
 end
@@ -134,6 +136,8 @@ vumps. Requires that `model_tensor` are defined for `model`.
 """
 function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
     M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    n = 1
+    fieldnames(typeof(model))[end] == :n && (n = model.n)
     Ni,Nj = size(M)
     ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
     ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
@@ -143,7 +147,7 @@ function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
         ir = Ni + 1 - i
         ene = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],Ene[i,j],ACd[ir,j],FR[i,j])
         λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
-        ene_tol += Array(ene)[]/Array(λ)[]
+        ene_tol += Array(ene)[]/Array(λ)[]/n
     end
     return ene_tol/Ni/Nj
 end
