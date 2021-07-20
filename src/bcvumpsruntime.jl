@@ -96,11 +96,11 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     AL, C, AR, FL, FR
 end
 
-function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, verbose=false)
+function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, miniter::Int, verbose=false)
     # initialize
     olderror = Inf
 
-    stopfun = StopFunction(olderror, -1, tol, maxiter)
+    stopfun = StopFunction(olderror, -1, tol, maxiter, miniter)
     rt, err = fixedpoint(res -> bcvumpstep(res...), (rt, olderror), stopfun)
     verbose && println("bcvumps done@step: $(stopfun.counter), error=$(err)")
     return rt
@@ -160,7 +160,7 @@ end
 
 If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
 """
-function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real, maxiter::Int, verbose = false, savefile = false) where {MT <: HamiltonianModel}
+function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false) where {MT <: HamiltonianModel}
     mkpath("./data/$(model)_$(atype)")
     chkp_file_up = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     verbose && print("↑ ")
@@ -169,7 +169,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     else
         rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
     end
-    envup = bcvumps(rtup; tol=tol, maxiter=maxiter, verbose = verbose)
+    envup = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
     ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
 
     Zygote.@ignore savefile && begin
@@ -189,7 +189,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     else
         rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
     end
-    envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, verbose = verbose)
+    envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
 
     Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)

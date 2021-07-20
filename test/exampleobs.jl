@@ -8,7 +8,7 @@ using Test
     Random.seed!(100)
     model = Ising(Ni,Nj)
     for β = 0.2
-        env = bcvumps_env(model, β, 2; tol=1e-20, maxiter=30, verbose = true, atype = atype)
+        env = bcvumps_env(model, β, 2; tol=1e-10, maxiter=10, verbose = true, atype = atype)
         @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
         @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
         @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
@@ -21,7 +21,7 @@ end
     for β = 0.8
         @show β
         M = model_tensor(model, β; atype = atype)
-        env = obs_bcenv(model, M; atype = atype, D = 2, χ = 10, tol = 1e-20, maxiter = 10, verbose = true, savefile = true)
+        env = obs_bcenv(model, M; atype = atype, D = 2, χ = 10, tol = 1e-10, maxiter = 10, miniter=3, verbose = true, savefile = true)
         @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
         @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
         # @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
@@ -63,7 +63,7 @@ end
     model = Ising22(15)
     for β = 0.8
         M = model_tensor(model, β; atype = atype)
-        env = obs_bcenv(model, M; atype = atype, D = 2, χ = 10, tol = 1e-20, maxiter = 20, verbose = true, savefile = true)
+        env = obs_bcenv(model, M; atype = atype, D = 2, χ = 10, tol = 1e-10, maxiter = 20, miniter = 1, verbose = true, savefile = true)
         # mag22,ene22 = MCMC(model,16,β,10000,100000)
         @show magnetisation(env,model,β),energy(env,model,β)
         # @test isapprox(magnetisation(env,model,β), mag22, atol=1e-3)

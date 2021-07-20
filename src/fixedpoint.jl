@@ -19,6 +19,7 @@ mutable struct StopFunction{T,S}
     counter::Int
     tol::S
     maxit::Int
+    minit::Int
 end
 
 """
@@ -33,7 +34,7 @@ function (st::StopFunction)(state)
     st.counter > st.maxit - 1 && return true
 
     error = state[2]
-    error <= st.tol && return true
+    error <= st.tol && st.counter > st.minit - 1 && return true
     st.olderror = error
 
     return false
