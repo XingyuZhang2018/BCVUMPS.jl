@@ -182,7 +182,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     Md = [permutedims(Mu[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
     Md = reshape(Md, Ni, Nj)
 
-    chkp_file_down = "./data/$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
+    chkp_file_down = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     verbose && print("↓ ")
     if isfile(chkp_file_down)                               
         rtdown = SquareBCVUMPSRuntime(Md, chkp_file_down, χ; verbose = verbose)   
@@ -191,11 +191,11 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     end
     envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
 
-    Zygote.@ignore savefile && begin
-        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
-        envsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file_down, "env", envsave)
-    end
+    # Zygote.@ignore savefile && begin
+    #     ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
+    #     envsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
+    #     save(chkp_file_down, "env", envsave)
+    # end
     ALd,ARd,Cd = envdown.AL,envdown.AR,envdown.C
 
     # λL_n, _ = norm_FL(ALu, ALd)
