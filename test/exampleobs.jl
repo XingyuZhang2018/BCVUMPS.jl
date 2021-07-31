@@ -1,14 +1,14 @@
 using BCVUMPS
-using BCVUMPS:bcvumps_env,magnetisation,magofβ,energy,eneofβ,Z,Zofβ
+using BCVUMPS:bcvumps_env,magnetisation,magofβ,energy,eneofβ,Z,Zofβ,BigZ
 using CUDA
 using Random
 using Test
 
 @testset "$(Ni)x$(Nj) ising with $atype{$dtype}" for atype in [Array], dtype in [Float64], Ni = [2], Nj = [2]
-    Random.seed!(100)
+    Random.seed!(100123)
     model = Ising(Ni,Nj)
-    for β = 0.2
-        env = bcvumps_env(model, β, 2; tol=1e-10, maxiter=10, verbose = true, atype = atype)
+    for β = 0.4
+        env = bcvumps_env(model, β, 10; tol=1e-20, maxiter=50, verbose = true, atype = atype)
         @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
         @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
         @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
@@ -24,7 +24,8 @@ end
         env = obs_bcenv(model, M; atype = atype, D = 2, χ = 10, tol = 1e-10, maxiter = 10, miniter=3, verbose = true, savefile = true)
         @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
         @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
-        # @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
+        @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
+        @test isapprox(BigZ(env), Zofβ(model,β), atol=1e-3)
     end
 end
 

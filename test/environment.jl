@@ -96,7 +96,7 @@ end
     end
 end
 
-@testset "ACenv and Cenv with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]
+@testset "ACenv and Cenv with $atype{$dtype}" for atype in [Array], dtype in [Float64], Ni = [2], Nj = [2]
     Random.seed!(50)
     D, d = 5, 2
     A = Array{atype{dtype,3},2}(undef, Ni, Nj)
@@ -107,12 +107,13 @@ end
     end
 
     AL, L = leftorth(A)
-    λL,FL = leftenv(AL, M)
+    λL,FL = leftenv(AL, AL, M)
     R, AR, = rightorth(A)
-    λR,FR = rightenv(AR, M)
+    λR,FR = rightenv(AR, AR, M)
 
     C = LRtoC(L, R)
     AC = ALCtoAC(AL, C)
+    @code_warntype ALCtoAC(AL, C)
 
     λAC, AC = ACenv(AC, FL, M, FR)
     λC, C = Cenv(C, FL, FR)
@@ -121,6 +122,35 @@ end
         @test λAC[i,j] * AC[i,j] ≈ ACmap(AC[i,j], FL[:,j], FR[:,j], M[:,j], i)
         @test λC[i,j] * C[i,j] ≈ Cmap(C[i,j], FL[:,jr], FR[:,j], i)
     end
+end
+
+@testset "fix type with $atype{$dtype}" for atype in [Array], dtype in [Float64], Ni = [2], Nj = [2]
+    using OMEinsum
+
+    Random.seed!(100)
+    D, d = 5, 2
+    A = Array{Float64,3}[rand(dtype, D, d, D) for i = 1:Ni*Nj]
+    B = Array{Float64,2}[rand(dtype, D, d) for i = 1:Ni*Nj]
+    function ABtoC(A,B)
+        [ein"abc,cd -> abd"(A[i], B[i]) for i = 1:Ni*Nj]::Vector{Array{Float64,3}}
+    end
+    @show ABtoC(A,B)
+    @code_warntype ABtoC(A,B)
+end
+
+using BenchmarkTools
+@testset "fix type with $atype{$dtype}" for atype in [Array], dtype in [Float64], Ni = [2], Nj = [2]
+    Random.seed!(100)
+    D, d = 5, 2
+    A = rand(dtype, D, d, D)
+    B = rand(dtype, D, D)
+    function ABtoC1(A,B)
+        ein"abc,cd -> abd"(A, B)
+    end
+
+    @benchmark $ABtoC($A,$B)
+    # @show ABtoC(A,B)
+    # @code_warntype ABtoC(A,B)
 end
 
 @testset "bcvumps unit test with $atype{$dtype}" for atype in [Array, CuArray], dtype in [Float64], Ni = [2], Nj = [2]

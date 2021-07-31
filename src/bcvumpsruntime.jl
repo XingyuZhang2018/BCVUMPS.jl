@@ -80,7 +80,8 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     _, FR = rightenv(AR, AR, M)
     C = LRtoC(L,R)
     Ni, Nj = size(M)
-    verbose && print("random initial bcvumps $(Ni)×$(Nj) environment-> ")
+    χ = size(FL[1,1], 1)
+    verbose && print("random initial $(Ni)×$(Nj) bcvumps_D$(D)_χ$(χ) environment-> ")
     AL, C, AR, FL, FR
 end
 
@@ -109,13 +110,11 @@ end
 function bcvumpstep(rt::BCVUMPSRuntime, err)
     M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
     AC = ALCtoAC(AL,C)
-    # _, ACp = ACenv(AC, FL, M, FR)
-    # _, Cp = Cenv(C, FL, FR)
-    Ni,Nj = size(AC)
+    # Ni,Nj = size(AC)
     # ACp = reshape([ACmap(AC[k], FL[:,ktoij(k,Ni,Nj)[2]], FR[:,ktoij(k,Ni,Nj)[2]], M[:,ktoij(k,Ni,Nj)[2]], ktoij(k,Ni,Nj)[1]) for k=1:Ni*Nj],(Ni,Nj))
     # Cp = reshape([Cmap(C[k], FL[:,ktoij(k,Ni,Nj)[2] + 1 - (ktoij(k,Ni,Nj)[2]==Nj) * Nj], FR[:,ktoij(k,Ni,Nj)[2]], ktoij(k,Ni,Nj)[1]) for k=1:Ni*Nj],(Ni,Nj))
-    # ACp = reshape([ACp[k] / ein"abc, abc ->"(ACp[k], ACp[k])[] for k=1:Ni*Nj],(Ni,Nj))
-    # Cp = reshape([Cp[k] / ein"ab, ab ->"(Cp[k], Cp[k])[] for k=1:Ni*Nj],(Ni,Nj))
+    # ACp = reshape([ACp[k] / sqrt(ein"abc, abc ->"(ACp[k], ACp[k])[]) for k=1:Ni*Nj],(Ni,Nj))
+    # Cp = reshape([Cp[k] / sqrt(ein"ab, ab ->"(Cp[k], Cp[k])[]) for k=1:Ni*Nj],(Ni,Nj))
     _, ACp = ACenv(AC, FL, M, FR)
     _, Cp = Cenv(C, FL, FR)
     ALp, ARp = ACCtoALAR(ACp, Cp)
@@ -125,19 +124,6 @@ function bcvumpstep(rt::BCVUMPSRuntime, err)
     _, Cp = Cenv(Cp, FL, FR)
     ALp, ARp = ACCtoALAR(ACp, Cp)
     err = error(ALp, Cp, FL, M, FR)
-    # i = 0
-    # while i < 10 && err > 1e-10
-    #     ACp = reshape([ACmap(AC[k], FL[:,ktoij(k,Ni,Nj)[2]], FR[:,ktoij(k,Ni,Nj)[2]], M[:,ktoij(k,Ni,Nj)[2]], ktoij(k,Ni,Nj)[1]) for k=1:Ni*Nj],(Ni,Nj))
-    #     Cp = reshape([Cmap(C[k], FL[:,ktoij(k,Ni,Nj)[2] + 1 - (ktoij(k,Ni,Nj)[2]==Nj) * Nj], FR[:,ktoij(k,Ni,Nj)[2]], ktoij(k,Ni,Nj)[1]) for k=1:Ni*Nj],(Ni,Nj))
-    #     ACp = reshape([ACp[k] / ein"abc, abc ->"(ACp[k], ACp[k])[] for k=1:Ni*Nj],(Ni,Nj))
-    #     Cp = reshape([Cp[k] / ein"ab, ab ->"(Cp[k], Cp[k])[] for k=1:Ni*Nj],(Ni,Nj))
-    #     ALp, ARp = ACCtoALAR(ACp, Cp)
-    #     _, FL = leftenv(AL, ALp, M, FL)
-    #     _, FR = rightenv(AR, ARp, M, FR)
-    #     err = error(AL, C, FL, M, FR)
-    #     i += 1
-    #     @show i,err
-    # end
     return SquareBCVUMPSRuntime(M, ALp, Cp, ARp, FL, FR), err
 end
 

@@ -14,7 +14,7 @@ function bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false, a
     else
         rt = SquareBCVUMPSRuntime(M, Val(:random), D; verbose = verbose)
     end
-    env = bcvumps(rt; tol=tol, maxiter=maxiter, verbose = verbose)
+    env = bcvumps(rt; tol=tol, maxiter=maxiter, miniter = 1, verbose = verbose)
     return env
 end
 
@@ -101,7 +101,7 @@ function Z(env)
         λ = ein"((αcβ,βη),ηcγ),αγ -> "(FL[i,jr],Cu[i,j],FR[i,j],Cd[ir,j])
         z_tol *= Array(z)[]/Array(λ)[]
     end
-    return z_tol^(1/Ni/Nj)
+    return abs(z_tol)^(1/Ni/Nj)
 end
 
 """
@@ -150,6 +150,32 @@ function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
         ene_tol += Array(ene)[]/Array(λ)[]/n
     end
     return ene_tol/Ni/Nj
+end
+
+"""
+    BigZ(env)
+
+return the partition function of the observable `env`.
+"""
+function BigZ(env)
+    M, ALu, Cu, ARu, ALd, Cd, ARd, _, _ = env
+    Ni,Nj = size(M)
+    χ, D, _ = size(ALu[1,1])
+    BgM = ein"acdf,bdeg -> abcefg"(M[1,1],M[1,2])
+    BgM = ein"abcdef,efghij -> abcgdhij"(BgM,BgM)
+    BgM = reshape(BgM, D^2, D^2, D^2, D^2)
+    Au = ein"aeb,bfc,cd -> aefd"(ALu[1,1],ALu[1,2],Cu[1,2])
+    Au = reshape(Au, χ, D^2, χ)
+    Ad = ein"aeb,bfc,cd -> aefd"(ALd[1,1],ALd[1,2],Cd[1,2])
+    Ad = reshape(Ad, χ, D^2, χ)
+    λL, BgFL = bigleftenv(ALu, ALd, M)
+    FL = reshape(BgFL[1,1], χ, D^2, χ)
+    λR, BgFR = bigrightenv(ARu, ARd, M)
+    println("Z = $(abs.(λL).^(1/Ni/Nj)), $(abs.(λR).^(1/Ni/Nj))")
+    FR = reshape(BgFR[1,2], χ, D^2, χ)
+    z = ein"(((adf,abc),bdeg),fgh),ceh -> "(FL,Au,BgM,Ad,FR)
+    λ = ein"((ace,ab),bcf),ef -> "(FL,Cu[1,2],FR,Cd[1,2])
+    return abs(Array(z)[]/Array(λ)[])^(1/Ni/Nj)
 end
 
 """
