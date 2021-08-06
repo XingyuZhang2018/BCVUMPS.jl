@@ -80,8 +80,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, env::Val{:ran
     _, FR = rightenv(AR, AR, M)
     C = LRtoC(L,R)
     Ni, Nj = size(M)
-    χ = size(FL[1,1], 1)
-    verbose && print("random initial $(Ni)×$(Nj) bcvumps_D$(D)_χ$(χ) environment-> ")
+    verbose && print("random initial $(Ni)×$(Nj) bcvumps_χ$(D) environment-> ")
     AL, C, AR, FL, FR
 end
 
@@ -148,9 +147,9 @@ end
 
 If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
 """
-function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false) where {MT <: HamiltonianModel}
-    mkpath("./data/$(model)_$(atype)")
-    chkp_file_up = "./data/$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
+function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, folder::String="./data/", verbose = false, savefile = false) where {MT <: HamiltonianModel}
+    mkpath(folder*"$(model)_$(atype)")
+    chkp_file_up = folder*"$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
     verbose && print("↑ ")
     if isfile(chkp_file_up)                               
         rtup = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
@@ -170,7 +169,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     Md = [permutedims(Mu[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
     Md = reshape(Md, Ni, Nj)
 
-    chkp_file_down = "./data/$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
+    chkp_file_down = folder*"$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
     verbose && print("↓ ")
     if isfile(chkp_file_down)                               
         rtdown = SquareBCVUMPSRuntime(Md, chkp_file_down, χ; verbose = verbose)   

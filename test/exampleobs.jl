@@ -24,8 +24,8 @@ end
         env = obs_bcenv(model, M; atype = atype, D = 2, χ = 10, tol = 1e-10, maxiter = 10, miniter=3, verbose = true, savefile = true)
         @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
         @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
-        @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
-        @test isapprox(BigZ(env), Zofβ(model,β), atol=1e-3)
+        # @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
+        # @test isapprox(BigZ(env), Zofβ(model,β), atol=1e-3)
     end
 end
 
