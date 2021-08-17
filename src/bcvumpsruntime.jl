@@ -189,7 +189,33 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     # λR_n, _ = norm_FR(ARu, ARd)
     # @show λL_n,λR_n
 
-    _, FL = obs_FL(ALu, ALd, Mu, FL)
-    _, FR = obs_FR(ARu, ARd, Mu, FR)
-    Mu, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR
+    # _, FL = obs_FL(ALu, ALd, Mu, FL)
+    # _, FR = obs_FR(ARu, ARd, Mu, FR)
+    Mu, ALu, Cu, ARu, ALd, Cd, ARd
+end
+
+
+"""
+    Mu, ALu, Cu, ARu = obs_bcenv_oneside(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, folder::String="./data/", verbose = false, savefile = false) where {MT <: HamiltonianModel}
+
+sometimes the finally observable is symetric, so we can use the same up and down environment. 
+"""
+function obs_bcenv_oneside(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, folder::String="./data/", verbose = false, savefile = false) where {MT <: HamiltonianModel}
+    mkpath(folder*"$(model)_$(atype)")
+    chkp_file_up = folder*"$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
+    verbose && print("↑ ")
+    if isfile(chkp_file_up)                               
+        rtup = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
+    else
+        rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
+    end
+    envup = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
+    ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
+
+    Zygote.@ignore savefile && begin
+        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envup.AL), Array{Array{Float64,2},2}(envup.C), Array{Array{Float64,3},2}(envup.AR), Array{Array{Float64,3},2}(envup.FL), Array{Array{Float64,3},2}(envup.FR)
+        envsave = SquareBCVUMPSRuntime(Mu, ALs, Cs, ARs, FLs, FRs)
+        save(chkp_file_up, "env", envsave)
+    end
+    Mu, ALu, Cu, ARu, FL, FR
 end
