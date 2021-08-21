@@ -200,7 +200,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
         save(chkp_file_obs, "env", envsave)
     end
 
-    Mu, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR
+    Mu, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR, envup.FL, envup.FR
 end
 
 
