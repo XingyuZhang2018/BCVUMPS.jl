@@ -157,7 +157,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
         rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
     end
     envup = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
-    ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
+    ALu,ARu,Cu = envup.AL,envup.AR,envup.C
 
     Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envup.AL), Array{Array{Float64,2},2}(envup.C), Array{Array{Float64,3},2}(envup.AR), Array{Array{Float64,3},2}(envup.FL), Array{Array{Float64,3},2}(envup.FR)
@@ -185,13 +185,22 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     end
     ALd,ARd,Cd = envdown.AL,envdown.AR,envdown.C
 
-    # λL_n, _ = norm_FL(ALu, ALd)
-    # λR_n, _ = norm_FR(ARu, ARd)
-    # @show λL_n,λR_n
+    chkp_file_obs = folder*"$(model)_$(atype)/obs_D$(D)_chi$(χ).jld2"
+    if isfile(chkp_file_obs)   
+        verbose && println("←→ observable environment load from $(chkp_file_obs)")
+        FL, FR = load(chkp_file_obs)["env"]
+    else
+        FL, FR = envup.FL,envup.FR
+    end
+    _, FL = obs_FL(ALu, ALd, Mu, FL)
+    _, FR = obs_FR(ARu, ARd, Mu, FR)
 
-    # _, FL = obs_FL(ALu, ALd, Mu, FL)
-    # _, FR = obs_FR(ARu, ARd, Mu, FR)
-    Mu, ALu, Cu, ARu, ALd, Cd, ARd
+    Zygote.@ignore savefile && begin
+        envsave = (FL, FR)
+        save(chkp_file_obs, "env", envsave)
+    end
+
+    Mu, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR
 end
 
 
