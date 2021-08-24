@@ -189,6 +189,9 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     if isfile(chkp_file_obs)   
         verbose && println("←→ observable environment load from $(chkp_file_obs)")
         FL, FR = load(chkp_file_obs)["env"]
+        Zygote.@ignore begin
+            FL, FR = Array{atype{Float64,3},2}(FL), Array{atype{Float64,3},2}(FR)
+        end
     else
         FL, FR = envup.FL,envup.FR
     end
@@ -196,7 +199,7 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
     _, FR = obs_FR(ARu, ARd, Mu, FR)
 
     Zygote.@ignore savefile && begin
-        envsave = (FL, FR)
+        envsave = (Array{Array{Float64,3},2}(FL), Array{Array{Float64,3},2}(FR))
         save(chkp_file_obs, "env", envsave)
     end
 
