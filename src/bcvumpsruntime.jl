@@ -53,7 +53,7 @@ canonical form. `FL,FR` is the left and right environment.
 ```jldoctest; setup = :(using BCVUMPS)
 julia> Ni, Nj = 2, 2;
 
-julia> M = Array{Array{Float64,3},2}(undef, Ni, Nj);
+julia> M = Array{Array{ComplexF64,3},2}(undef, Ni, Nj);
 
 julia> for j = 1:Nj, i = 1:Ni
            M[i,j] = rand(2,2,2,2)
@@ -91,7 +91,7 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     verbose && print("bcvumps $(Ni)×$(Nj) environment load from $(chkp_file) -> ")   
     AL, C, AR, FL, FR = env.AL, env.C, env.AR, env.FL, env.FR
     Zygote.@ignore begin
-        AL, C, AR, FL, FR = Array{atype{Float64,3},2}(env.AL), Array{atype{Float64,2},2}(env.C), Array{atype{Float64,3},2}(env.AR), Array{atype{Float64,3},2}(env.FL), Array{atype{Float64,3},2}(env.FR)
+        AL, C, AR, FL, FR = Array{atype{ComplexF64,3},2}(env.AL), Array{atype{ComplexF64,2},2}(env.C), Array{atype{ComplexF64,3},2}(env.AR), Array{atype{ComplexF64,3},2}(env.FL), Array{atype{ComplexF64,3},2}(env.FR)
     end
     AL, C, AR, FL, FR
 end
@@ -160,9 +160,9 @@ function bcvumps_env(model::MT, M::AbstractArray; atype = Array, χ::Int, tol::R
     env = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
 
     Zygote.@ignore savefile && begin
-        ALs, Cs, ARs, FLs, FRs = Array{Array{ComplexF64,3},2}(envup.AL), Array{Array{ComplexF64,2},2}(envup.C), Array{Array{ComplexF64,3},2}(envup.AR), Array{Array{ComplexF64,3},2}(envup.FL), Array{Array{ComplexF64,3},2}(envup.FR)
+        ALs, Cs, ARs, FLs, FRs = Array{Array{ComplexF64,3},2}(env.AL), Array{Array{ComplexF64,2},2}(env.C), Array{Array{ComplexF64,3},2}(env.AR), Array{Array{ComplexF64,3},2}(env.FL), Array{Array{ComplexF64,3},2}(env.FR)
         envsave = SquareBCVUMPSRuntime(M, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file_up, "env", envsave)
+        save(chkp_file, "env", envsave)
     end
     env
 end
@@ -182,7 +182,7 @@ function obs_bcenv(model::MT, M::AbstractArray; atype=Array, χ::Int, tol::Real=
         verbose && println("←→ observable environment load from $(chkp_file_obs)")
         FL, FR = load(chkp_file_obs)["env"]
         Zygote.@ignore begin
-            FL, FR = Array{atype{Float64,3},2}(FL), Array{atype{Float64,3},2}(FR)
+            FL, FR = Array{atype{ComplexF64,3},2}(FL), Array{atype{ComplexF64,3},2}(FR)
         end
     else
         FL, FR = envup.FL, envup.FR
@@ -202,7 +202,7 @@ function obs_bcenv(model::MT, M::AbstractArray; atype=Array, χ::Int, tol::Real=
     _, FL = obs_FL(ALu, ALd, M, FL)
     _, FR = obs_FR(ARu, ARd, M, FR)
     Zygote.@ignore savefile && begin
-        envsave = (Array{Array{Float64,3},2}(FL), Array{Array{Float64,3},2}(FR))
+        envsave = (Array{Array{ComplexF64,3},2}(FL), Array{Array{ComplexF64,3},2}(FR))
         save(chkp_file_obs, "env", envsave)
     end
     return M, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR, envup.FL, envup.FR
