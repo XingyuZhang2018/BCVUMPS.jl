@@ -16,7 +16,7 @@ function model_tensor(model::Ising, β::Real; atype = Array)
     # w = exp.(- β .* ham)
     # wsq = sqrt(w)
     # m = atype(ein"ia,ib,ic,id -> abcd"(wsq, wsq, wsq, wsq))
-    a = reshape(Float64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 1] , 2,2,2,2)
+    a = reshape(ComplexF64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 1] , 2,2,2,2)
     cβ, sβ = sqrt(cosh(β)), sqrt(sinh(β))
     q = 1/sqrt(2) * [cβ+sβ cβ-sβ; cβ-sβ cβ+sβ]
     m = atype(ein"abcd,ai,bj,ck,dl -> ijkl"(a,q,q,q,q))
@@ -63,7 +63,7 @@ square lattice tensor-network.
 """
 function mag_tensor(model::Ising, β::Real; atype = Array)
     Ni,Nj = model.Ni, model.Nj
-    a = reshape(Float64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 -1] , 2,2,2,2)
+    a = reshape(ComplexF64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 -1] , 2,2,2,2)
     cβ, sβ = sqrt(cosh(β)), sqrt(sinh(β))
     q = 1/sqrt(2) * [cβ+sβ cβ-sβ; cβ-sβ cβ+sβ]
     m = atype(ein"abcd,ai,bj,ck,dl -> ijkl"(a,q,q,q,q))
@@ -72,7 +72,7 @@ end
 
 function mag_tensor(model::Ising22, β::Real; atype = Array)
     r = model.r
-    a = reshape(Float64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 -1] , 2,2,2,2)
+    a = reshape(ComplexF64[1 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 -1] , 2,2,2,2)
     ham = [-1. 1;1 -1]
     w1 = exp.(- β .* ham)
     w2 = exp.(- r * β .* ham)

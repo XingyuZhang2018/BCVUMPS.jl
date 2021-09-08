@@ -3,7 +3,7 @@ module BCVUMPS
 using OMEinsum
 export hamiltonian, model_tensor, mag_tensor
 export Ising, Ising22, Ising33
-export bcvumps, bcvumps_env, obs_bcenv, obs_bcenv_oneside, magnetisation, magofβ, energy, eneofβ
+export bcvumps, bcvumps_env, obs_bcenv, magnetisation, magofβ, energy, eneofβ
 export MCMC
 
 include("hamiltonianmodels.jl")
