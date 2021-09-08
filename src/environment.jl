@@ -6,11 +6,11 @@ using Random
 """
 tensor order graph: from left to right, top to bottom.
 ```
-a ────┬──── c    a──────┬──────c   
-│     b     │    │      │      │                     
-├─ d ─┼─ e ─┤    │      b      │                  
-│     g     │    │      │      │  
-f ────┴──── h    d──────┴──────e    
+a ────┬──── c    a──────┬──────c     a─────b
+│     b     │    │      │      │     │     │
+├─ d ─┼─ e ─┤    │      b      │     ├──c──┤           
+│     g     │    │      │      │     │     │
+f ────┴──── h    d──────┴──────e     d─────e
 ```
 """
 

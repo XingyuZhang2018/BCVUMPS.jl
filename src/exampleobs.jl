@@ -1,22 +1,13 @@
 """
-    bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false) where {MT <: HamiltonianModel}
-
-return the bcvumps environment of the `model` as a function of the inverse
-temperature `β` and the environment bonddimension `D` as calculated with
-vumps. Save `env` in file `./data/model_β_D.jld2`. Requires that `model_tensor` are defined for `model`.
+tensor order graph: from left to right, top to bottom.
+```
+a ────┬──── c    a──────┬──────c     a─────b
+│     b     │    │      │      │     │     │
+├─ d ─┼─ e ─┤    │      b      │     ├──c──┤           
+│     g     │    │      │      │     │     │
+f ────┴──── h    d──────┴──────e     d─────e
+```
 """
-function bcvumps_env(model::MT, β, D; tol=1e-10, maxiter=20, verbose = false, atype = Array) where {MT <: HamiltonianModel}
-    M = model_tensor(model, β; atype = atype)
-    mkpath("./data/$(model)_$(atype)")
-    chkp_file = "./data/$(model)_$(atype)/$(model)_$(atype)_β$(β)_D$(D).jld2"
-    if isfile(chkp_file)                               
-        rt = SquareBCVUMPSRuntime(M, chkp_file, D; verbose = verbose)   
-    else
-        rt = SquareBCVUMPSRuntime(M, Val(:random), D; verbose = verbose)
-    end
-    env = bcvumps(rt; tol=tol, maxiter=maxiter, miniter = 1, verbose = verbose)
-    return env
-end
 
 """
     Z(env::SquareBCVUMPSRuntime)
@@ -26,14 +17,14 @@ return the partition function of the `env`.
 function Z(env::SquareBCVUMPSRuntime)
     M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
     Ni,Nj = size(M)
-    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    ACij = [ein"abc,cd -> abd"(AL[i],C[i]) for i=1:Ni*Nj]
     AC = reshape(ACij,Ni,Nj)
     z_tol = 1
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
         jr = j + 1 - Nj * (j==Nj)
-        z = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
-        λ = ein"((αcβ,βη),ηcγ),αγ -> "(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))
+        z = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
+        λ = ein"((acd,ab),bce),de -> "(FL[i,jr],C[i,j],FR[i,j],conj(C[ir,j]))
         z_tol *= Array(z)[]/Array(λ)[]
     end
     return z_tol^(1/Ni/Nj)
@@ -47,14 +38,14 @@ return the magnetisation of the `model`. Requires that `mag_tensor` are defined 
 function magnetisation(env::SquareBCVUMPSRuntime, model::MT, β) where {MT <: HamiltonianModel}
     M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
     Ni,Nj = size(M)
-    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    ACij = [ein"abc,cd -> abd"(AL[i],C[i]) for i=1:Ni*Nj]
     AC = reshape(ACij,Ni,Nj)
     Mag = mag_tensor(model, β; atype = _arraytype(M[1,1]))
     mag_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        mag = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],Mag[i,j],conj(AC[ir,j]),FR[i,j])
-        λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
+        mag = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],AC[i,j],Mag[i,j],conj(AC[ir,j]),FR[i,j])
+        λ = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
         mag_tol += Array(mag)[]/Array(λ)[]
     end
     return abs(mag_tol)/Ni/Nj
@@ -70,14 +61,14 @@ vumps. Requires that `model_tensor` are defined for `model`.
 function energy(env::SquareBCVUMPSRuntime, model::MT, β::Real) where {MT <: HamiltonianModel}
     M,AL,C,FL,FR = env.M,env.AL,env.C,env.FL,env.FR
     Ni,Nj = size(M)
-    ACij = [ein"asc,cb -> asb"(AL[i],C[i]) for i=1:Ni*Nj]
+    ACij = [ein"abc,cd -> abd"(AL[i],C[i]) for i=1:Ni*Nj]
     AC = reshape(ACij,Ni,Nj)
     Ene = energy_tensor(model, β; atype = _arraytype(M[1,1]))
     ene_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = i + 1 - Ni * (i==Ni)
-        ene = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],Ene[i,j],conj(AC[ir,j]),FR[i,j])
-        λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
+        ene = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],AC[i,j],Ene[i,j],conj(AC[ir,j]),FR[i,j])
+        λ = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],AC[i,j],M[i,j],conj(AC[ir,j]),FR[i,j])
         ene_tol += Array(ene)[]/Array(λ)[]
     end
     return ene_tol/Ni/Nj
@@ -91,14 +82,14 @@ return the partition function of the observable `env`.
 function Z(env)
     M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
     Ni,Nj = size(M)
-    ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
-    ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACu = reshape([ein"abc,cd -> abd"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACd = reshape([ein"abc,cd -> abd"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
     z_tol = 1
     for j = 1:Nj,i = 1:Ni
         ir = Ni + 1 - i
         jr = j + 1 - Nj * (j==Nj)
-        z = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
-        λ = ein"((αcβ,βη),ηcγ),αγ -> "(FL[i,jr],Cu[i,j],FR[i,j],Cd[ir,j])
+        z = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
+        λ = ein"((acd,ab),bce),de -> "(FL[i,jr],Cu[i,j],FR[i,j],Cd[ir,j])
         z_tol *= Array(z)[]/Array(λ)[]
     end
     return abs(z_tol)^(1/Ni/Nj)
@@ -110,18 +101,18 @@ end
 return the magnetisation of the `model`. Requires that `mag_tensor` are defined for `model`.
 """
 function magnetisation(env, model::MT, β) where {MT <: HamiltonianModel}
-    M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    M, ALu, Cu, _, ALd, Cd, _, FL, FR, = env
     n = 1
     fieldnames(typeof(model))[end] == :n && (n = model.n)
     Ni,Nj = size(M)
-    ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
-    ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACu = reshape([ein"abc,cd -> abd"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACd = reshape([ein"abc,cd -> abd"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
     Mag = mag_tensor(model, β; atype = _arraytype(M[1,1]))
     mag_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = Ni + 1 - i
-        mag = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],Mag[i,j],ACd[ir,j],FR[i,j])
-        λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
+        mag = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],Mag[i,j],ACd[ir,j],FR[i,j])
+        λ = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
         mag_tol += Array(mag)[]/Array(λ)[]/n
     end
     return abs(mag_tol)/Ni/Nj
@@ -135,18 +126,19 @@ temperature `β` and the environment bonddimension `D` as calculated with
 vumps. Requires that `model_tensor` are defined for `model`.
 """
 function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
-    M, ALu, Cu, _, ALd, Cd, _, FL, FR = env
+    M, ALu, Cu, _, ALd, Cd, _, FL, FR, = env
     n = 1
     fieldnames(typeof(model))[end] == :n && (n = model.n)
     Ni,Nj = size(M)
-    ACu = reshape([ein"asc,cb -> asb"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
-    ACd = reshape([ein"asc,cb -> asb"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACu = reshape([ein"abc,cd -> abd"(ALu[i],Cu[i]) for i=1:Ni*Nj],Ni,Nj)
+    ACd = reshape([ein"abc,cd -> abd"(ALd[i],Cd[i]) for i=1:Ni*Nj],Ni,Nj)
     Ene = energy_tensor(model, β; atype = _arraytype(M[1,1]))
     ene_tol = 0
     for j = 1:Nj,i = 1:Ni
         ir = Ni + 1 - i
-        ene = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],Ene[i,j],ACd[ir,j],FR[i,j])
-        λ = ein"(((αcβ,βsη),cpds),αpγ),ηdγ -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
+        ene = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],Ene[i,j],ACd[ir,j],FR[i,j])
+        λ = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
+        @show Array(ene)[]/Array(λ)[]/n
         ene_tol += Array(ene)[]/Array(λ)[]/n
     end
     return ene_tol/Ni/Nj

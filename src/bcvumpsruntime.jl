@@ -143,48 +143,40 @@ function uptodown(i,Ni,Nj)
 end
 
 """
+    env = bcvumps_env(model::MT, M::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up") where {MT <: HamiltonianModel}
+
+sometimes the finally observable is symetric, so we can use the same up and down environment. 
+"""
+function bcvumps_env(model::MT, M::AbstractArray; atype = Array, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up") where {MT <: HamiltonianModel}
+    D = size(M,1)
+    savefile && mkpath(folder*"$(model)_$(atype)")
+    chkp_file = folder*"$(model)_$(atype)/$(direction)_D$(D)_χ$(χ).jld2"
+    verbose && direction == "up" ? print("↑ ") : print("↓ ")
+    if isfile(chkp_file)                               
+        rtup = SquareBCVUMPSRuntime(M, chkp_file, χ; verbose = verbose)   
+    else
+        rtup = SquareBCVUMPSRuntime(M, Val(:random), χ; verbose = verbose)
+    end
+    env = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
+
+    Zygote.@ignore savefile && begin
+        ALs, Cs, ARs, FLs, FRs = Array{Array{ComplexF64,3},2}(envup.AL), Array{Array{ComplexF64,2},2}(envup.C), Array{Array{ComplexF64,3},2}(envup.AR), Array{Array{ComplexF64,3},2}(envup.FL), Array{Array{ComplexF64,3},2}(envup.FR)
+        envsave = SquareBCVUMPSRuntime(M, ALs, Cs, ARs, FLs, FRs)
+        save(chkp_file_up, "env", envsave)
+    end
+    env
+end
+
+"""
     Mu, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR = obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, verbose = false)
 
 If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
 """
-function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, folder::String="./data/", verbose = false, savefile = false) where {MT <: HamiltonianModel}
-    mkpath(folder*"$(model)_$(atype)")
-    chkp_file_up = folder*"$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
-    verbose && print("↑ ")
-    if isfile(chkp_file_up)                               
-        rtup = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
-    else
-        rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
-    end
-    envup = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
+function obs_bcenv(model::MT, M::AbstractArray; atype=Array, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose=false, savefile= false, folder::String="./data/", updown = true) where {MT <: HamiltonianModel}
+    envup = bcvumps_env(model, M; atype=atype, χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="up")
     ALu,ARu,Cu = envup.AL,envup.AR,envup.C
 
-    Zygote.@ignore savefile && begin
-        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envup.AL), Array{Array{Float64,2},2}(envup.C), Array{Array{Float64,3},2}(envup.AR), Array{Array{Float64,3},2}(envup.FL), Array{Array{Float64,3},2}(envup.FR)
-        envsave = SquareBCVUMPSRuntime(Mu, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file_up, "env", envsave)
-    end
-
-    Ni, Nj = size(ALu)
-    Md = [permutedims(Mu[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
-    Md = reshape(Md, Ni, Nj)
-
-    chkp_file_down = folder*"$(model)_$(atype)/down_D$(D)_chi$(χ).jld2"
-    verbose && print("↓ ")
-    if isfile(chkp_file_down)                               
-        rtdown = SquareBCVUMPSRuntime(Md, chkp_file_down, χ; verbose = verbose)   
-    else
-        rtdown = SquareBCVUMPSRuntime(Md, Val(:random), χ; verbose = verbose)
-    end
-    envdown = bcvumps(rtdown; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
-
-    Zygote.@ignore savefile && begin
-        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envdown.AL), Array{Array{Float64,2},2}(envdown.C), Array{Array{Float64,3},2}(envdown.AR), Array{Array{Float64,3},2}(envdown.FL), Array{Array{Float64,3},2}(envdown.FR)
-        envsave = SquareBCVUMPSRuntime(Md, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file_down, "env", envsave)
-    end
-    ALd,ARd,Cd = envdown.AL,envdown.AR,envdown.C
-
+    D = size(M[1,1],1)
     chkp_file_obs = folder*"$(model)_$(atype)/obs_D$(D)_chi$(χ).jld2"
     if isfile(chkp_file_obs)   
         verbose && println("←→ observable environment load from $(chkp_file_obs)")
@@ -193,41 +185,26 @@ function obs_bcenv(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int,
             FL, FR = Array{atype{Float64,3},2}(FL), Array{atype{Float64,3},2}(FR)
         end
     else
-        FL, FR = envup.FL,envup.FR
+        FL, FR = envup.FL, envup.FR
     end
-    _, FL = obs_FL(ALu, ALd, Mu, FL)
-    _, FR = obs_FR(ARu, ARd, Mu, FR)
 
+    if updown 
+        Ni, Nj = size(ALu)
+        Md = [permutedims(M[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
+        Md = reshape(Md, Ni, Nj)
+
+        envdown = bcvumps_env(model, Md; atype=atype, χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="down")
+        ALd, ARd, Cd = envdown.AL, envdown.AR, envdown.C
+    else
+        ALd, ARd, Cd = ALu, ARu, Cu
+    end
+
+    _, FL = obs_FL(ALu, ALd, M, FL)
+    _, FR = obs_FR(ARu, ARd, M, FR)
     Zygote.@ignore savefile && begin
         envsave = (Array{Array{Float64,3},2}(FL), Array{Array{Float64,3},2}(FR))
         save(chkp_file_obs, "env", envsave)
     end
-
-    Mu, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR, envup.FL, envup.FR
+    return M, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR, envup.FL, envup.FR
 end
 
-
-"""
-    Mu, ALu, Cu, ARu = obs_bcenv_oneside(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, folder::String="./data/", verbose = false, savefile = false) where {MT <: HamiltonianModel}
-
-sometimes the finally observable is symetric, so we can use the same up and down environment. 
-"""
-function obs_bcenv_oneside(model::MT, Mu::AbstractArray; atype = Array, D::Int, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, folder::String="./data/", verbose = false, savefile = false) where {MT <: HamiltonianModel}
-    mkpath(folder*"$(model)_$(atype)")
-    chkp_file_up = folder*"$(model)_$(atype)/up_D$(D)_chi$(χ).jld2"
-    verbose && print("↑ ")
-    if isfile(chkp_file_up)                               
-        rtup = SquareBCVUMPSRuntime(Mu, chkp_file_up, χ; verbose = verbose)   
-    else
-        rtup = SquareBCVUMPSRuntime(Mu, Val(:random), χ; verbose = verbose)
-    end
-    envup = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
-    ALu,ARu,Cu,FL,FR = envup.AL,envup.AR,envup.C,envup.FL,envup.FR
-
-    Zygote.@ignore savefile && begin
-        ALs, Cs, ARs, FLs, FRs = Array{Array{Float64,3},2}(envup.AL), Array{Array{Float64,2},2}(envup.C), Array{Array{Float64,3},2}(envup.AR), Array{Array{Float64,3},2}(envup.FL), Array{Array{Float64,3},2}(envup.FR)
-        envsave = SquareBCVUMPSRuntime(Mu, ALs, Cs, ARs, FLs, FRs)
-        save(chkp_file_up, "env", envsave)
-    end
-    Mu, ALu, Cu, ARu, FL, FR
-end
