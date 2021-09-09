@@ -148,7 +148,7 @@ end
 sometimes the finally observable is symetric, so we can use the same up and down environment. 
 """
 function bcvumps_env(model::MT, M::AbstractArray; atype = Array, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up") where {MT <: HamiltonianModel}
-    D = size(M,1)
+    D = size(M[1,1],1)
     savefile && mkpath(folder*"$(model)_$(atype)")
     chkp_file = folder*"$(model)_$(atype)/$(direction)_D$(D)_χ$(χ).jld2"
     verbose && direction == "up" ? print("↑ ") : print("↓ ")
