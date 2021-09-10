@@ -147,10 +147,10 @@ end
 
 sometimes the finally observable is symetric, so we can use the same up and down environment. 
 """
-function bcvumps_env(model::MT, M::AbstractArray; atype = Array, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up") where {MT <: HamiltonianModel}
+function bcvumps_env(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up")
     D = size(M[1,1],1)
-    savefile && mkpath(folder*"$(model)_$(atype)")
-    chkp_file = folder*"$(model)_$(atype)/$(direction)_D$(D)_χ$(χ).jld2"
+    savefile && mkpath(folder)
+    chkp_file = folder*"$(direction)_D$(D)_χ$(χ).jld2"
     verbose && direction == "up" ? print("↑ ") : print("↓ ")
     if isfile(chkp_file)                               
         rtup = SquareBCVUMPSRuntime(M, chkp_file, χ; verbose = verbose)   
@@ -172,12 +172,12 @@ end
 
 If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
 """
-function obs_bcenv(model::MT, M::AbstractArray; atype=Array, χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose=false, savefile= false, folder::String="./data/", updown = true) where {MT <: HamiltonianModel}
-    envup = bcvumps_env(model, M; atype=atype, χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="up")
+function obs_bcenv(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose=false, savefile= false, folder::String="./data/", updown = true)
+    envup = bcvumps_env(M; χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="up")
     ALu,ARu,Cu = envup.AL,envup.AR,envup.C
 
     D = size(M[1,1],1)
-    chkp_file_obs = folder*"$(model)_$(atype)/obs_D$(D)_chi$(χ).jld2"
+    chkp_file_obs = folder*"obs_D$(D)_chi$(χ).jld2"
     if isfile(chkp_file_obs)   
         verbose && println("←→ observable environment load from $(chkp_file_obs)")
         FL, FR = load(chkp_file_obs)["env"]
@@ -193,7 +193,7 @@ function obs_bcenv(model::MT, M::AbstractArray; atype=Array, χ::Int, tol::Real=
         Md = [permutedims(M[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
         Md = reshape(Md, Ni, Nj)
 
-        envdown = bcvumps_env(model, Md; atype=atype, χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="down")
+        envdown = bcvumps_env(Md; χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="down")
         ALd, ARd, Cd = envdown.AL, envdown.AR, envdown.C
     else
         ALd, ARd, Cd = ALu, ARu, Cu
