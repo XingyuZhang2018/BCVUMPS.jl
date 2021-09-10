@@ -177,6 +177,7 @@ function obs_bcenv(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, 
     ALu,ARu,Cu = envup.AL,envup.AR,envup.C
 
     D = size(M[1,1],1)
+    atype = _arraytype(M[1,1])
     chkp_file_obs = folder*"obs_D$(D)_chi$(χ).jld2"
     if isfile(chkp_file_obs)   
         verbose && println("←→ observable environment load from $(chkp_file_obs)")
