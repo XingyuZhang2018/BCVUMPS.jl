@@ -7,6 +7,7 @@ abstract type AbstractLattice end
 struct SquareLattice <: AbstractLattice end
 
 export BCVUMPSRuntime, SquareBCVUMPSRuntime
+export move
 
 # NOTE: should be renamed to more explicit names
 """
@@ -21,16 +22,16 @@ a struct to hold the tensors during the `bcvumps` algorithm, each is a `Ni` x `N
 - `D × d' × D` `FR[i,j]` tensor
 and `LT` is a AbstractLattice to define the lattice type.
 """
-struct BCVUMPSRuntime{LT,T,N,AT <: AbstractArray{<:AbstractArray,2},CT,ET}
+struct BCVUMPSRuntime{LT,T,N,AT <: AbstractArray{<:AbstractArray,2},CT,ET,ETF}
     M::AT
     AL::ET
     C::CT
     AR::ET
-    FL::ET
-    FR::ET
-    function BCVUMPSRuntime{LT}(M::AT, AL::ET, C::CT, AR::ET, FL::ET, FR::ET) where {LT <: AbstractLattice,AT <: AbstractArray{<:AbstractArray,2}, CT <: AbstractArray{<:AbstractArray,2}, ET <: AbstractArray{<:AbstractArray,2}}
+    FL::ETF
+    FR::ETF
+    function BCVUMPSRuntime{LT}(M::AT, AL::ET, C::CT, AR::ET, FL::ETF, FR::ETF) where {LT <: AbstractLattice,AT <: AbstractArray{<:AbstractArray,2}, CT <: AbstractArray{<:AbstractArray,2}, ET <: AbstractArray{<:AbstractArray,2},ETF <: AbstractArray{<:AbstractArray,2}}
         T, N = eltype(M[1,1]), ndims(M[1,1])
-        new{LT,T,N,AT,CT,ET}(M, AL, C, AR, FL, FR)
+        new{LT,T,N,AT,CT,ET,ETF}(M, AL, C, AR, FL, FR)
     end
 end
 
@@ -96,17 +97,35 @@ function _initializect_square(M::AbstractArray{<:AbstractArray,2}, chkp_file::St
     AL, C, AR, FL, FR
 end
 
-function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, miniter::Int, verbose=false)
+function bcvumps(rt::BCVUMPSRuntime; tol::Real, maxiter::Int, miniter::Int, verbose=false, show_every=Inf)
     # initialize
     olderror = Inf
+    vumps_counting = show_every_count(show_every)
 
     stopfun = StopFunction(olderror, -1, tol, maxiter, miniter)
-    rt, err = fixedpoint(res -> bcvumpstep(res...), (rt, olderror), stopfun)
+    rt, err = fixedpoint(res -> bcvumpstep(res...;show_counting=vumps_counting), (rt, olderror), stopfun)
     verbose && println("bcvumps done@step: $(stopfun.counter), error=$(err)")
     return rt
 end
 
-function bcvumpstep(rt::BCVUMPSRuntime, err)
+function show_every_count(n::Number)
+    i = 0
+    function counting()
+        i = i+1
+        if mod(i,n)==0
+            return i
+        else
+            return 0
+        end
+    end
+    return counting
+end
+
+function bcvumpstep(rt::BCVUMPSRuntime, err;show_counting=show_every_count(Inf))
+    temp = show_counting()
+    if temp!=0
+        print("VUMPS Step:$(temp),error=$(err)\n")
+    end
     M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
     AC = ALCtoAC(AL,C)
     # Ni,Nj = size(AC)
@@ -147,7 +166,7 @@ end
 
 sometimes the finally observable is symetric, so we can use the same up and down environment. 
 """
-function bcvumps_env(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up")
+function bcvumps_env(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose = false, savefile = false, folder::String="./data/", direction::String= "up", show_every = Inf)
     D = size(M[1,1],1)
     savefile && mkpath(folder)
     chkp_file = folder*"$(direction)_D$(D)_χ$(χ).jld2"
@@ -157,7 +176,7 @@ function bcvumps_env(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10
     else
         rtup = SquareBCVUMPSRuntime(M, Val(:random), χ; verbose = verbose)
     end
-    env = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose)
+    env = bcvumps(rtup; tol=tol, maxiter=maxiter, miniter=miniter, verbose = verbose,show_every=show_every)
 
     Zygote.@ignore savefile && begin
         ALs, Cs, ARs, FLs, FRs = Array{Array{ComplexF64,3},2}(env.AL), Array{Array{ComplexF64,2},2}(env.C), Array{Array{ComplexF64,3},2}(env.AR), Array{Array{ComplexF64,3},2}(env.FL), Array{Array{ComplexF64,3},2}(env.FR)
@@ -172,8 +191,8 @@ end
 
 If `Ni,Nj>1` and `Mij` are different bulk tensor, the up and down environment are different. So to calculate observable, we must get ACup and ACdown, which is easy to get by overturning the `Mij`. Then be cautious to get the new `FL` and `FR` environment.
 """
-function obs_bcenv(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose=false, savefile= false, folder::String="./data/", updown = true)
-    envup = bcvumps_env(M; χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="up")
+function obs_bcenv(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, miniter::Int=1, verbose=false, savefile= false, folder::String="./data/", updown = true, show_every = Inf)
+    envup = bcvumps_env(M; χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="up",show_every=show_every)
     ALu,ARu,Cu = envup.AL,envup.AR,envup.C
 
     D = size(M[1,1],1)
@@ -194,7 +213,7 @@ function obs_bcenv(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, 
         Md = [permutedims(M[uptodown(i,Ni,Nj)], (1,4,3,2)) for i = 1:Ni*Nj]
         Md = reshape(Md, Ni, Nj)
 
-        envdown = bcvumps_env(Md; χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="down")
+        envdown = bcvumps_env(Md; χ=χ, tol=tol, maxiter=maxiter, miniter=miniter, verbose=verbose, savefile=savefile, folder=folder, direction="down",show_every=show_every)
         ALd, ARd, Cd = envdown.AL, envdown.AR, envdown.C
     else
         ALd, ARd, Cd = ALu, ARu, Cu
@@ -208,4 +227,3 @@ function obs_bcenv(M::AbstractArray; χ::Int, tol::Real=1e-10, maxiter::Int=10, 
     end
     return M, ALu, Cu, ARu, ALd, Cd, ARd, FL, FR, envup.FL, envup.FR
 end
-
