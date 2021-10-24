@@ -109,11 +109,6 @@ end
 function bcvumpstep(rt::BCVUMPSRuntime, err)
     M, AL, C, AR, FL, FR = rt.M, rt.AL, rt.C, rt.AR, rt.FL, rt.FR
     AC = ALCtoAC(AL,C)
-    # Ni,Nj = size(AC)
-    # ACp = reshape([ACmap(AC[k], FL[:,ktoij(k,Ni,Nj)[2]], FR[:,ktoij(k,Ni,Nj)[2]], M[:,ktoij(k,Ni,Nj)[2]], ktoij(k,Ni,Nj)[1]) for k=1:Ni*Nj],(Ni,Nj))
-    # Cp = reshape([Cmap(C[k], FL[:,ktoij(k,Ni,Nj)[2] + 1 - (ktoij(k,Ni,Nj)[2]==Nj) * Nj], FR[:,ktoij(k,Ni,Nj)[2]], ktoij(k,Ni,Nj)[1]) for k=1:Ni*Nj],(Ni,Nj))
-    # ACp = reshape([ACp[k] / sqrt(ein"abc, abc ->"(ACp[k], ACp[k])[]) for k=1:Ni*Nj],(Ni,Nj))
-    # Cp = reshape([Cp[k] / sqrt(ein"ab, ab ->"(Cp[k], Cp[k])[]) for k=1:Ni*Nj],(Ni,Nj))
     _, ACp = ACenv(AC, FL, M, FR)
     _, Cp = Cenv(C, FL, FR)
     ALp, ARp = ACCtoALAR(ACp, Cp)
@@ -122,7 +117,7 @@ function bcvumpstep(rt::BCVUMPSRuntime, err)
     _, ACp = ACenv(ACp, FL, M, FR)
     _, Cp = Cenv(Cp, FL, FR)
     ALp, ARp = ACCtoALAR(ACp, Cp)
-    err = error(ALp, Cp, FL, M, FR)
+    err = error(ALp, Cp, ARp, FL, M, FR)
     return SquareBCVUMPSRuntime(M, ALp, Cp, ARp, FL, FR), err
 end
 

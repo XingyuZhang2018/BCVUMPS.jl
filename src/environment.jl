@@ -544,7 +544,7 @@ function ACCtoALAR(AC, C)
 end
 
 """
-Compute the error through all environment `AL,C,FL,M,FR`
+Compute the error through all environment `AL,C,AR,FL,M,FR`
 
 ````
         ┌── AC──┐         
@@ -556,19 +556,19 @@ MAC1 =  FL─ M ──FR  =  λAC  │   │   │
         │   │   │           ┌──C──┐ 
 MAC2 =  FL─ M ──FR  =  λAC  │     │ 
         │   │   │         
-        ┕── AL─     
+         ── AR──┘   
         
-── MAC1 ──    ≈    ── AL ── MAC2 ── 
-    │                 │
+── MAC1 ──    ≈    ── MAC2 ── AR ── 
+    │                         │
 ````
 """
-function error(AL,C,FL,M,FR)
+function error(AL,C,AR,FL,M,FR)
     Ni,Nj = size(AL)
     AC = ALCtoAC(AL, C)
     err = 0
     for j = 1:Nj, i = 1:Ni
         MAC = ACmap(AC[i,j], FL[:,j], FR[:,j], M[:,j], i)
-        MAC -= ein"asd,(cpd,cpb) -> asb"(AL[i,j],conj(AL[i,j]),MAC)
+        MAC -= ein"(apc,dpc),dsb -> asb"(MAC,conj(AR[i,j]),AR[i,j])
         err += norm(MAC)
     end
     return err
