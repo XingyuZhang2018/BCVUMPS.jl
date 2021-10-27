@@ -17,15 +17,15 @@ using Test
     end
 end
 
-@testset "$(Ni)x$(Nj) ising up and down with $atype" for atype in [Array, CuArray], Ni = [2], Nj = [2]
+@testset "$(Ni)x$(Nj) ising up and down with $atype" for atype in [Array], Ni = [2], Nj = [2]
     Random.seed!(100)
     model = Ising(Ni,Nj)
-    for β = 0.2:0.2:0.4
+    for β = 0.2
         @show β
         M = model_tensor(model, β; atype = atype)
-        env = obs_bcenv(model, M; atype = atype, χ = 10, miniter = 2, verbose = true)
-        @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-5)
-        @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-2)
+        env = obs_bcenv(M; χ = 10, maxiter = 10, verbose = true)
+        @test isapprox(magnetisation(env,model,β), magofβ(model,β), atol=1e-8)
+        @test isapprox(energy(env,model,β), eneofβ(model,β), atol=1e-7)
         # @test isapprox(Z(env), Zofβ(model,β), atol=1e-3)
         # @test isapprox(BigZ(env), Zofβ(model,β), atol=1e-3)
     end

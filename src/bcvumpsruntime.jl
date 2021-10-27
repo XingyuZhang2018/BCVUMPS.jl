@@ -111,13 +111,14 @@ function bcvumpstep(rt::BCVUMPSRuntime, err)
     AC = ALCtoAC(AL,C)
     _, ACp = ACenv(AC, FL, M, FR)
     _, Cp = Cenv(C, FL, FR)
-    ALp, ARp = ACCtoALAR(ACp, Cp)
+    ALp, ARp, _, _ = ACCtoALAR(ACp, Cp)
     _, FL = leftenv(AL, ALp, M, FL)
     _, FR = rightenv(AR, ARp, M, FR)
     _, ACp = ACenv(ACp, FL, M, FR)
     _, Cp = Cenv(Cp, FL, FR)
-    ALp, ARp = ACCtoALAR(ACp, Cp)
-    err = error(ALp, Cp, ARp, FL, M, FR)
+    ALp, ARp, errL, errR = ACCtoALAR(ACp, Cp)
+    # err = error(ALp, Cp, ARp, FL, M, FR) + errL + errR
+    err = errL + errR
     return SquareBCVUMPSRuntime(M, ALp, Cp, ARp, FL, FR), err
 end
 

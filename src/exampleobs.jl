@@ -138,7 +138,6 @@ function energy(env, model::MT, β::Real) where {MT <: HamiltonianModel}
         ir = Ni + 1 - i
         ene = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],Ene[i,j],ACd[ir,j],FR[i,j])
         λ = ein"(((adf,abc),dgeb),fgh),ceh -> "(FL[i,j],ACu[i,j],M[i,j],ACd[ir,j],FR[i,j])
-        @show Array(ene)[]/Array(λ)[]/n
         ene_tol += Array(ene)[]/Array(λ)[]/n
     end
     return ene_tol/Ni/Nj

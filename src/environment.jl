@@ -2,6 +2,7 @@ using Base.Threads
 using LinearAlgebra
 using KrylovKit
 using Random
+using Zygote
 
 """
 tensor order graph: from left to right, top to bottom.
@@ -490,16 +491,20 @@ end
 
 function ACCtoAL(ACij,Cij)
     D,d, = size(ACij)
-    QAC, _ = qrpos(reshape(ACij,(D*d, D)))
-    QC, _ = qrpos(Cij)
-    reshape(QAC*QC', (D, d, D))
+    QAC, RAC = qrpos(reshape(ACij,(D*d, D)))
+    QC, RC = qrpos(Cij)
+    errL = norm(RAC-RC)
+    # @show errL
+    reshape(QAC*QC', (D, d, D)), errL
 end
 
 function ACCtoAR(ACij,Cijr)
     D,d, = size(ACij)
-    _, QAC = lqpos(reshape(ACij,(D, d*D)))
-    _, QC = lqpos(Cijr)
-    reshape(QC'*QAC, (D, d, D))
+    LAC, QAC = lqpos(reshape(ACij,(D, d*D)))
+    LC, QC = lqpos(Cijr)
+    errR = norm(LAC-LC)
+    # @show errR
+    reshape(QC'*QAC, (D, d, D)), errR
 end
 
 """
@@ -536,11 +541,13 @@ QR factorization to get `AL` and `AR` from `AC` and `C`
 """
 function ACCtoALAR(AC, C)
     Ni,Nj = size(AC)
-    ALij = [ACCtoAL(AC[i],C[i]) for i=1:Ni*Nj]
-    AL = reshape(ALij,Ni,Nj)
-    ARij = [ACCtoAR(AC[i],C[itoir(i,Ni,Nj)]) for i=1:Ni*Nj]
-    AR = reshape(ARij,Ni,Nj)
-    return AL, AR
+    ALijerrL = [ACCtoAL(AC[i],C[i]) for i=1:Ni*Nj]
+    AL = reshape([ALijerrL[i][1] for i=1:Ni*Nj],Ni,Nj)
+    errL = Zygote.@ignore sum([ALijerrL[i][2] for i=1:Ni*Nj])
+    ARijerrR = [ACCtoAR(AC[i],C[itoir(i,Ni,Nj)]) for i=1:Ni*Nj]
+    AR = reshape([ARijerrR[i][1] for i=1:Ni*Nj],Ni,Nj)
+    errR = Zygote.@ignore sum([ARijerrR[i][2] for i=1:Ni*Nj])
+    return AL, AR, errL, errR
 end
 
 """
